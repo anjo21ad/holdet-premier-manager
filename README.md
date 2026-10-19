@@ -13,9 +13,51 @@
 
 En model til Premier Manager på [holdet.dk](https://www.holdet.dk), udviklet og brugt runde for runde i Efterår 2026. Den giver hver spiller i spillet ét tal: hvor meget han forventes at stige i værdi resten af sæsonen. Og den giver en klar regel for, hvornår en handel er pengene værd.
 
-Hver prognose skrives ned før deadline og måles bagefter mod det, der skete. Modellen ændres kun, når en ændring beviseligt giver bedre prognoser. Holdet bag projektet ligger nr. 69 af over 28.000 efter 7 runder.
+Hver prognose skrives ned før deadline og måles bagefter mod det, der skete. Modellen ændres kun, når en ændring beviseligt giver bedre prognoser.
 
-<p align="center"><img src="docs/img/testet.svg" alt="Bygget og testet i virkeligheden: holdet bag projektet er nr. 69 af over 28.000 hold efter 7 runder. Cirka 590 spillere vurderes før hver deadline, 808 spiller-runder i backtest, 90-97 procent kroneeksakt pointberegning og seks kontroller pr. handel" width="100%"></p>
+## Sådan virker det
+
+<p align="center"><img src="docs/img/saadan-virker-det.svg" alt="Fra data til beslutning: holdet.dk, understat, Betfair Match Odds og RotoWire går ind i modellen, derefter kvalitetstjek, seks spørgsmål og beslutning" width="100%"></p>
+
+| Kilde | Hvad den bidrager med |
+|---|---|
+| **holdet.dk** | Priser, klubber og kampprogram |
+| **understat** | Minutter, xG og xA fra hver kamp i tre sæsoner |
+| **Betfair** | Match Odds: hvad markedet tror om hver kamp |
+| **RotoWire** | Forventede startopstillinger til næste runde |
+
+Før hver deadline tjekker modellen sine egne data. Er en fil forældet, eller har en kilde svaret med noget forkert, stopper den i stedet for at regne videre på forkerte tal. Efter hver runde sammenlignes prognoserne med det, der skete.
+
+<details>
+<summary><b>For de nysgerrige: de tre regler og formlen</b></summary>
+<br>
+
+| | Regel | Hvad den gør |
+|---|---|---|
+| 1 | **Rate (Marcel)** | xG og xA pr. 90 minutter fra **starter** i tre sæsoner, vægtet 1,0 / 0,8 / 0,6. Minutter i en anden klub tæller halvt. Raten trækkes mod medianen for spillerens rolle med 1.000 minutters vægt |
+| 2 | **Spilletid** | Næste runde fra RotoWire. Resten af sæsonen er ½ status + ½ startandel i klubbens seneste 15 kampe |
+| 3 | **Holdstyrke** | Udgangspunkt før sæsonen, opdateret med de målforventninger, der passer til Betfairs priser |
+| | **Pointformel** | Spillets regler i `ev_kamp()`. `evaluer()` er det eneste sted, forventningen beregnes |
+
+```
+g90 = (Σ v · xG · 90 + K · typisk_for_rollen) / (Σ v · minutter + K)        K = 1.000 minutter
+```
+
+De seks kontroller i `handel.py`: basis, forskellen −25 %, K/2, 2K, nye spillere −0,1 i spilletid og gamle spillere +0,1 i spilletid. En spiller, hvis tal er mere end 50 % gæt, anbefales aldrig uden et menneskes vurdering.
+
+Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
+
+</details>
+
+## Mit hold: Skjoldes Juveler
+
+<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 8, nr. 69 af over 28.000 efter 7 runder: Raya; Calafiori, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Thiago, Haaland (kaptajn), Kostoulas. Rundens handel: Koumas ud, Schade ind, +526 tusind kroner over resten af sæsonen og ja i alle seks spørgsmål" width="100%"></p>
+
+Modellen er beslutningsgrundlaget for mit eget hold, **Skjoldes Juveler**, som efter 7 runder ligger nr. 69 af over 28.000. Søg holdet frem på holdet.dk, og tjek selv.
+
+Før runde 8 er handlen Koumas ud og Schade ind. Koumas røg på bænken, da Isak var tilbage i Liverpools startopstilling, og Schade er tilbage efter en skulderskade. Handlen giver +526 tusind kroner over resten af sæsonen og holder i alle seks spørgsmål. Kortet opdateres efter hver runde.
+
+<p align="center"><img src="docs/img/testet.svg" alt="Bygget og testet i virkeligheden: cirka 590 spillere vurderes før hver deadline, 808 spiller-runder i backtest, 90-97 procent kroneeksakt pointberegning og seks kontroller pr. handel" width="100%"></p>
 
 > [!TIP]
 > **Oftest er svaret: behold dit hold.** En handel koster penge. Den skal bevise, at den er det værd, også hvis modellen tager fejl.
@@ -80,40 +122,6 @@ Hver spiller kommer med en forklaring: hvor mange minutter tallet bygger på, hv
 <p align="center"><img src="docs/img/seks-spoergsmaal.svg" alt="Seks spørgsmål: Foden til Mbeumo holder i alle seks og anbefales. Rice til Rogers er positiv i basis, men fejler tre af de seks" width="100%"></p>
 
 Målingerne viser, hvor en model som denne typisk tager fejl. Forskellen mellem spillere er lidt mindre i virkeligheden, end prognoserne siger. Tilliden til en spillers egne tal kan være sat for højt eller for lavt. Og spilletid er det sværeste at forudsige. Derfor spørger modellen seks gange, om handlen stadig er god, hvis netop den fejl er sket. Ét nej, og du beholder dit hold.
-
-## Sådan virker det
-
-<p align="center"><img src="docs/img/saadan-virker-det.svg" alt="Fra data til beslutning: holdet.dk, understat, Betfair Match Odds og RotoWire går ind i modellen, derefter kvalitetstjek, seks spørgsmål og beslutning" width="100%"></p>
-
-| Kilde | Hvad den bidrager med |
-|---|---|
-| **holdet.dk** | Priser, klubber og kampprogram |
-| **understat** | Minutter, xG og xA fra hver kamp i tre sæsoner |
-| **Betfair** | Match Odds: hvad markedet tror om hver kamp |
-| **RotoWire** | Forventede startopstillinger til næste runde |
-
-Før hver deadline tjekker modellen sine egne data. Er en fil forældet, eller har en kilde svaret med noget forkert, stopper den i stedet for at regne videre på forkerte tal. Efter hver runde sammenlignes prognoserne med det, der skete.
-
-<details>
-<summary><b>For de nysgerrige: de tre regler og formlen</b></summary>
-<br>
-
-| | Regel | Hvad den gør |
-|---|---|---|
-| 1 | **Rate (Marcel)** | xG og xA pr. 90 minutter fra **starter** i tre sæsoner, vægtet 1,0 / 0,8 / 0,6. Minutter i en anden klub tæller halvt. Raten trækkes mod medianen for spillerens rolle med 1.000 minutters vægt |
-| 2 | **Spilletid** | Næste runde fra RotoWire. Resten af sæsonen er ½ status + ½ startandel i klubbens seneste 15 kampe |
-| 3 | **Holdstyrke** | Udgangspunkt før sæsonen, opdateret med de målforventninger, der passer til Betfairs priser |
-| | **Pointformel** | Spillets regler i `ev_kamp()`. `evaluer()` er det eneste sted, forventningen beregnes |
-
-```
-g90 = (Σ v · xG · 90 + K · typisk_for_rollen) / (Σ v · minutter + K)        K = 1.000 minutter
-```
-
-De seks kontroller i `handel.py`: basis, forskellen −25 %, K/2, 2K, nye spillere −0,1 i spilletid og gamle spillere +0,1 i spilletid. En spiller, hvis tal er mere end 50 % gæt, anbefales aldrig uden et menneskes vurdering.
-
-Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
-
-</details>
 
 ## Virker det?
 
