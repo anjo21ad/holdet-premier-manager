@@ -187,4 +187,4 @@ Projektet er ikke tilknyttet holdet.dk, understat, Betfair eller RotoWire.
 
 ## Licens
 
-[MIT](LICENSE)
+Koden er under [MIT](LICENSE). Skriften i illustrationerne er [Inter](https://rsms.me/inter/) under [SIL Open Font License](docs/img/LICENSE-Inter.txt).
