@@ -11,16 +11,18 @@
 
 <h3 align="center">Hvem skal du købe, og hvem skal du sælge?</h3>
 
-I Premier Manager på [holdet.dk](https://www.holdet.dk) handler det om at få dit hold til at stige i værdi. Projektet giver hver spiller ét tal: hvor meget han forventes at stige resten af sæsonen. Og det giver en klar regel for, hvornår en handel er pengene værd.
+En model til Premier Manager på [holdet.dk](https://www.holdet.dk), udviklet og brugt runde for runde i Efterår 2026. Den giver hver spiller i spillet ét tal: hvor meget han forventes at stige i værdi resten af sæsonen. Og den giver en klar regel for, hvornår en handel er pengene værd.
+
+Hver prognose skrives ned før deadline og måles bagefter mod det, der skete. Modellen ændres kun, når en ændring beviseligt giver bedre prognoser.
+
+<p align="center"><img src="docs/img/testet.svg" alt="Bygget og testet i virkeligheden: cirka 590 spillere vurderes før hver deadline, 808 spiller-runder i backtest, 90-97 procent kroneeksakt pointberegning og seks kontroller pr. handel" width="100%"></p>
 
 > [!TIP]
 > **Oftest er svaret: behold dit hold.** En handel koster penge. Den skal bevise, at den er det værd, også hvis modellen tager fejl.
 
-&nbsp;
-
 ## Spillet på et halvt minut
 
-<p align="center"><img src="docs/img/point-er-pris.svg" alt="Point er pris: en midtbanespiller, der scorer det første mål i en 2-0-udesejr, stiger 262.000 kr. i værdi" width="100%"></p>
+<p align="center"><img src="docs/img/point-er-pris.svg" alt="Point er pris: scorer Bruno Fernandes det første mål i en 2-0-udesejr, stiger hans pris 262.000 kr." width="100%"></p>
 
 Alt, hvad en spiller gør på banen, bliver til kroner på hans pris. Stiger dine spillere, stiger dit hold. Men hvert køb koster 1 % i gebyr, og penge, der står i spillere, giver ikke rente i banken. En handel skal altså tjene mere, end den koster.
 
@@ -28,21 +30,21 @@ Alt, hvad en spiller gør på banen, bliver til kroner på hans pris. Stiger din
 
 <p align="center"><img src="docs/img/held-ligner-talent.svg" alt="Held ligner talent: 24 lige gode spillere spreder sig tilfældigt efter tre runder, og den, der ser bedst ud, har haft mest held" width="100%"></p>
 
-Det er let at finde en spiller med flotte tal. Det svære er at vide, om tallene er ægte. Tre kampe er for lidt til at skille talent fra held, og leder du blandt 600 spillere efter den, der ser bedst ud, finder du næsten altid den, der har været heldigst. Fænomenet har et navn: *optimizerens forbandelse*.
+Det er let at finde en spiller med flotte tal. Det svære er at vide, om tallene er ægte. Få kampe er for lidt til at skille talent fra held, og leder du blandt 600 spillere efter den, der ser bedst ud, finder du oftest den, der har været heldigst. Fænomenet har et navn: *optimizerens forbandelse* (Smith & Winkler 2006).
 
-Projektets første udgave faldt selv i fælden. Den havde fem lag af håndlavede justeringer, og da otte forslag til handler blev efterprøvet, holdt ingen af dem.
+Modellen er bygget op omkring det problem. Den første udgave havde fem lag af håndlavede justeringer, og da otte forslag til handler blev efterprøvet, holdt ingen af dem. Derfor blev den bygget om fra bunden med få, gennemprøvede regler og en fast test af hver handel.
 
 ## Kuren: tro mest på det, der er set mange gange
 
-<p align="center"><img src="docs/img/tro-paa-det-sete.svg" alt="Spiller A med 3 kampe og 0,80 xG får budet 0,35. Spiller B med 3 sæsoner og 0,45 xG får budet 0,39" width="100%"></p>
+<p align="center"><img src="docs/img/tro-paa-det-sete.svg" alt="Saka har 0,69 xG i år mod 0,35 før, og modellen siger 0,44. Palmer har 0,29 i år mod 0,45 før, og modellen siger 0,38" width="100%"></p>
 
-Modellen blander spillerens egne tal med det typiske for hans rolle. Har han spillet få kampe, vejer det typiske mest. Har han spillet mange, vejer hans egne tal mest. Grænsen går ved cirka 11 kampe.
+Modellen vejer tre sæsoner sammen, så de nyeste kampe tæller mest, og trækker resultatet mod det typiske for spillerens rolle. Jo flere kampe en spiller har bag sig, desto mere vejer hans egne tal. Efter cirka 11 kampe vejer de mere end det typiske.
 
-Det lyder banalt, men det er netop det, der skiller en model, der jagter held, fra en, der finder talent.
+Saka og Palmer viser, hvorfor det betyder noget. En god eller dårlig start på sæsonen flytter vurderingen, men den overtager den ikke. Det er det, der skiller talent fra held. Princippet er det samme som i baseballmodellen Marcel og i Efron og Morris' klassiske arbejde om shrinkage.
 
 ## Hvad er en handel værd?
 
-<p align="center"><img src="docs/img/handlens-vaerdi.svg" alt="Clarke ud og Neto ind: +620 i forventet vækst, minus 48 i gebyr og 62 i tabt rente, giver +510 tusind kroner" width="100%"></p>
+<p align="center"><img src="docs/img/handlens-vaerdi.svg" alt="Foden ud og Mbeumo ind: +645 i forventet vækst, minus 72 i gebyr og 114 i tabt rente, giver +458 tusind kroner" width="100%"></p>
 
 En handel regnes over resten af sæsonen, ikke kun næste runde. Fra gevinsten trækkes gebyret og den rente, du går glip af, fordi pengene nu står i en spiller i stedet for i banken.
 
@@ -53,30 +55,31 @@ En handel regnes over resten af sæsonen, ikke kun næste runde. Fra gevinsten t
 Eksempelholdet i [`eksempler/hold.json`](eksempler/hold.json) før runde 8 i Efterår 2026:
 
 ```text
-$ python handel.py "Jack Clarke > Pedro Neto"
+$ python handel.py "Phil Foden > Bryan Mbeumo"
 
-Clarke > Neto
-  basis +510   forskel -25 % +355   K/2 +520   2K +503   ind pS -0,1 +407   ud pS +0,1 +451
-  -> ANBEFALES (positiv i 6 af 6; vaerst +355 tkr)
+Foden > Mbeumo
+  basis +458   forskel -25 % +297   K/2 +466   2K +443   ind pS -0,1 +324   ud pS +0,1 +340
+  -> ANBEFALES (positiv i 6 af 6; vaerst +297 tkr)
 
-UD  Jack Clarke (IPS, midfield/AM): g90 0.18  a90 0.17  pS naeste 0.25  pStart 0.27  ev_tot 92
-      bygger paa 631 vaegtede startminutter (prioren vejer 61 %): 2024 IPS 827 min (xg90 0.09); 2026 IPS 135 min (xg90 0.1)
-      spilletid: RotoWire-status 0.25, startandel 0.29 over 7 klubkampe
-      ! tynd: 135 startmin i aar
-IND Pedro Neto (CHE, midfield/AM): g90 0.20  a90 0.23  pS naeste 0.72  pStart 0.76  ev_tot 712
-      bygger paa 3708 vaegtede startminutter (prioren vejer 21 %): 2024 CHE 2000 min (xg90 0.17); 2025 CHE 2502 min (xg90 0.17); 2026 CHE 506 min (xg90 0.35)
-      spilletid: RotoWire-status 0.72, startandel 0.8 over 15 klubkampe
+UD  Phil Foden (MCI, midfield/CM): g90 0.25  a90 0.25  pS naeste 0.37  pStart 0.38  ev_tot 387
+      bygger paa 2814 vaegtede startminutter (prioren vejer 26 %): 2024 MCI 1639 min (xg90 0.33); 2025 MCI 1945 min (xg90 0.26); 2026 MCI 275 min (xg90 0.54)
+      spilletid: RotoWire-status 0.37, startandel 0.4 over 15 klubkampe
+      ! tynd: 275 startmin i aar
+IND Bryan Mbeumo (MUN, midfield/AM): g90 0.40  a90 0.20  pS naeste 0.78  pStart 0.82  ev_tot 1032
+      bygger paa 3771 vaegtede startminutter (prioren vejer 21 %): 2024 BRE 3419 min (xg90 0.36); 2025 MUN 2644 min (xg90 0.45); 2026 MUN 630 min (xg90 0.58)
+      spilletid: RotoWire-status 0.78, startandel 0.87 over 15 klubkampe
+      ! klubskifte: minutter fra anden klub vaegtet x0.5
 ```
 
-Hver spiller kommer med en forklaring: hvor mange minutter tallet bygger på, og hvor meget det typiske for rollen vejer. Clarkes tal er 61 % gæt, Netos kun 21 %.
+Hver spiller kommer med en forklaring: hvor mange minutter tallet bygger på, hvor meget det typiske for rollen vejer, og hvad der bør undersøges, før tallet bruges. Foden har kun startet tre kampe i år, og hans startchance er lav. Mbeumo bygger på tre fulde sæsoner.
 
 </details>
 
 ## Seks spørgsmål før hver handel
 
-<p align="center"><img src="docs/img/seks-spoergsmaal.svg" alt="Seks spørgsmål: Clarke til Neto holder i alle seks og anbefales. Clarke til Rudoni holder også, men Rudonis tal er 73 procent gæt" width="100%"></p>
+<p align="center"><img src="docs/img/seks-spoergsmaal.svg" alt="Seks spørgsmål: Foden til Mbeumo holder i alle seks og anbefales. Rice til Rogers er positiv i basis, men fejler tre af de seks" width="100%"></p>
 
-Ingen model er perfekt, og vi ved, hvor denne typisk tager fejl. Den overvurderer forskellen mellem spillere en smule. Den kan stole for meget eller for lidt på en spillers egne tal. Og spilletid er svær at forudsige. Derfor spørger den seks gange, om handlen stadig er god, hvis netop den fejl er sket. Ét nej, og du beholder dit hold.
+Målingerne viser, hvor en model som denne typisk tager fejl. Forskellen mellem spillere er lidt mindre i virkeligheden, end prognoserne siger. Tilliden til en spillers egne tal kan være sat for højt eller for lavt. Og spilletid er det sværeste at forudsige. Derfor spørger modellen seks gange, om handlen stadig er god, hvis netop den fejl er sket. Ét nej, og du beholder dit hold.
 
 ## Sådan virker det
 
@@ -116,9 +119,9 @@ Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
 
 <p align="center"><img src="docs/img/virker-det.svg" alt="For spillere med under 5 kampes data var den første models hældning 0,34 og denne models 0,96. Over 15 kampe 1,16 mod 0,95" width="100%"></p>
 
-Alle prognoser skrives ned før runden og kan ikke rettes bagefter. Efter runden måles det, hvor meget af forskellen mellem spillerne der holdt. For spillere med få kampe var den første models forskelle mest held. Den nye model rammer næsten præcist.
+Alle prognoser skrives ned før runden og kan ikke rettes bagefter. Efter runden måles det, hvor meget af forskellen mellem spillerne der holdt. For spillere med få kampe var den første models forskelle mest held. Den nuværende model rammer næsten præcist, og den samlede fejl faldt med 7 % (MSE 3.504 mod 3.258).
 
-Det svage punkt er spillere med 5-15 kampe bag sig. Det følges runde for runde, og modellen ændres kun, hvis en ændring beviseligt hjælper. Pointberegningen bag målingen rammer holdets egne tal kroneeksakt for 90-97 % af spillerne.
+Pointberegningen bag målingen rammer holdets egne tal kroneeksakt for 90-97 % af spillerne. Spillere med 5-15 kampe bag sig er den gruppe, der følges tættest fra runde til runde.
 
 ## Prøv det selv
 
@@ -135,9 +138,9 @@ python hent.py rotowire 8                   # højst 24 timer før deadline
 python hent.py betfair 8                    # kræver miljøvariablen BETFAIR_AK
 
 python model.py 8                           # første gang hentes spillerhistorik (~5 min)
-python facit_alle.py                        # realiserede point hidtil
+python facit_alle.py                        # faktiske point hidtil
 python kvalitet.py --runde 8                # STOP betyder: ingen beslutning på disse data
-python handel.py --skan "Jack Clarke"       # de bedste afløsere, vurderet i alle seks spørgsmål
+python handel.py --skan "Phil Foden"        # de bedste afløsere, vurderet i alle seks spørgsmål
 ```
 
 Testene kører uden data: `python test_model.py`. Hele rytmen før deadline og efter hver runde står i [docs/arbejdsgang.md](docs/arbejdsgang.md).
@@ -161,12 +164,12 @@ Testene kører uden data: `python test_model.py`. Hele rytmen før deadline og e
 
 </details>
 
-## Begrænsninger
+## Kendte forenklinger
 
 - Bygget til **Premier Manager Efterår 2026**. Til et nyt spil skal spil-id, sæsoner og udgangspunktet for holdene rettes ([se hvordan](docs/arbejdsgang.md#en-ny-sæson)).
 - Straffespark ligger i xG. En spiller, der lige har overtaget straffesparkene, er undervurderet.
-- Nye spillere i en klub får deres spilletid fra meget få kampe.
-- Betfair prissætter kun næste runde pålideligt. Resten af sæsonen regnes på holdstyrken.
+- Nye spillere i en klub får deres spilletid fra få kampe.
+- Betfair prissætter næste runde. De senere runder regnes på holdstyrken.
 
 ## Data og vilkår
 

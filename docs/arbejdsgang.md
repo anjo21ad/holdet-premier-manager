@@ -32,8 +32,8 @@ Første kørsel af `model.py` henter understats spillerfiler, én pr. spiller me
 3. **Præregistrér**, før du ser på handler: `python praeregistrer.py 8`. Filen kan ikke overskrives. Henter du RotoWire igen tæt på deadline, så præregistrér med et mærke, fx `8-lor`.
 4. **Vurdér handler**
    ```bash
-   python handel.py --skan "Jack Clarke"                        # de 15 bedste afløsere i alle seks kontroller
-   python handel.py "Jack Clarke > Pedro Neto"                  # én handel
+   python handel.py --skan "Phil Foden"                         # de 15 bedste afløsere i alle seks kontroller
+   python handel.py "Phil Foden > Bryan Mbeumo"                 # én handel
    python handel.py "A > B" "C > D"                             # en pakke
    python handel.py "A > B" --log "største risiko: ..."         # skriv til beslutningslog.csv
    ```

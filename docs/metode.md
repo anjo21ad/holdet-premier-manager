@@ -2,13 +2,13 @@
 
 Her står, hvorfor modellen ser ud, som den gør, hvad tallene bygger på, og hvordan den er blevet målt. Hvordan den køres, står i [arbejdsgang.md](arbejdsgang.md).
 
-## Hvorfor modellen er simpel
+## Hvorfor modellen har få regler
 
-Den første udgave af projektet havde fem håndtunede lag oven på hinanden: tier-blandinger, karrierelapper, manuelle startchancer og en holdet-fil, der var blevet forældet. En dag blev otte handelsforslag efterprøvet, og alle otte faldt. Hver fejl sad i ét lag, og rettelserne nåede aldrig de andre.
+Den første udgave af projektet havde fem håndtunede lag oven på hinanden: tier-blandinger, karrierelapper, manuelle startchancer og en holdet-fil, der var blevet forældet. Da otte handelsforslag blev efterprøvet, faldt alle otte. Hver fejl sad i ét lag, og rettelserne nåede aldrig de andre.
 
 Mønstret har et navn: **optimizerens forbandelse** (Smith & Winkler 2006). Når du leder blandt 600 spillere efter den højeste forventning, finder du systematisk dem, hvor støjen tilfældigvis trækker estimatet op. Jo flere estimater og jo mere støj, desto større skuffelse. Kuren er ikke flere lag, men **shrinkage**: et estimat, der hviler på lidt data, trækkes mod det typiske, indtil der er data nok til at tro på det.
 
-Derfor blev hele kæden erstattet af én fil med tre regler. Baseballmodellen Marcel bygger på samme princip og ligger tæt på langt mere komplekse projektionssystemer.
+Derfor blev hele kæden erstattet af én fil med tre regler, hver begrundet i forskning og målt i backtest. Baseballmodellen Marcel bygger på samme princip og præsterer på niveau med langt mere komplekse projektionssystemer. Få regler er et bevidst valg, og backtesten bakker det op.
 
 **Kompleksitetsbudget:** ingen ny parameter, kilde eller lag uden en målt forbedring i backtest på mindst to runder.
 
@@ -103,7 +103,7 @@ Facit kommer fra understat og er valideret mod holdets egne point: 90-97 % af sp
 
 Shrinkagen gjorde det, den skulle: spillere med tynd evidens er nu kalibreret (β 0,96 mod 0,34).
 
-**Det svage punkt** er spillere med 5-15 kampes evidens (β omkring 0,3). Det gentog sig i den første runde uden for stikprøven. Det følges, før noget ændres, fordi en regel ikke må bygges på under tre runders evidens.
+**Vagtpunktet** er spillere med 5-15 kampes evidens (β omkring 0,3), også i den første runde uden for stikprøven. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
 
 **Afvist efter kompleksitetsbudgettet,** fordi de ikke gav en målbar forskel: en prisprior pr. rolle og prisinterval samt spilletidsvinduer på 5, 8 og 10 kampe (Brier 0,207-0,209).
 

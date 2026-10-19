@@ -1,8 +1,8 @@
 {
   "_doc": "Det ENESTE sted, dit eget skoen gaar ind i modellen. Hoejst ~5 aktive poster. Felter: pStart (startchance resten af saesonen) og/eller rolle (CB, FB, CM, AM, FW), grund og udloeber (dato). Udloebne poster ignoreres og meldes ved koersel. Eksemplet herunder er udloebet og paavirker ikke modellen. Kopier til roden af repoet.",
-  "Jack Rudoni": {
-    "pStart": 0.85,
-    "grund": "eksempel: fast starter i de seneste kampe; startandelen over 15 kampe taeller sidste saesons indskiftninger med",
+  "Phil Foden": {
+    "pStart": 0.8,
+    "grund": "eksempel: tilbage efter skade og ventes at starte igen; startandelen over 15 kampe taeller skadesperioden med",
     "udloeber": "2026-01-01"
   }
 }
