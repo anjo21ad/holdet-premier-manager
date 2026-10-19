@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 300" width="1280" height="300" role="img" aria-label="holdet-premier-manager: forventet værdi pr. spiller og robuste handler">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d3b2c"/>
+      <stop offset="1" stop-color="#072319"/>
+    </linearGradient>
+    <linearGradient id="omraade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#a3e635" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#a3e635" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="kort"><rect width="1280" height="300" rx="18"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#kort)">
+    <rect width="1280" height="300" fill="url(#bg)"/>
+
+    <!-- banen -->
+    <g fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="2">
+      <rect x="800" y="30" width="440" height="240" rx="4"/>
+      <line x1="1020" y1="30" x2="1020" y2="270"/>
+      <circle cx="1020" cy="150" r="46"/>
+      <rect x="800" y="95" width="56" height="110"/>
+      <rect x="1184" y="95" width="56" height="110"/>
+    </g>
+
+    <!-- holdets værdi over runderne -->
+    <path d="M830 228 L872 214 L914 220 L956 196 L998 188 L1040 170 L1082 176 L1124 146 L1166 128 L1208 96 L1208 250 L830 250 Z" fill="url(#omraade)"/>
+    <polyline points="830,228 872,214 914,220 956,196 998,188 1040,170 1082,176 1124,146 1166,128 1208,96"
+              fill="none" stroke="#a3e635" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+    <g fill="#072319" stroke="#a3e635" stroke-width="3">
+      <circle cx="956" cy="196" r="6"/>
+      <circle cx="1124" cy="146" r="6"/>
+      <circle cx="1208" cy="96" r="7" fill="#a3e635"/>
+    </g>
+
+    <!-- tekst -->
+    <g font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+      <text x="64" y="92" fill="#86efac" font-size="16" font-weight="600" letter-spacing="3">PREMIER MANAGER · HOLDET.DK</text>
+      <text x="64" y="152" fill="#ffffff" font-size="52" font-weight="700">holdet-premier-manager</text>
+      <text x="64" y="200" fill="#d1fae5" font-size="23">Forventet værdi pr. spiller og handler,</text>
+      <text x="64" y="232" fill="#d1fae5" font-size="23">der holder, selv hvis modellen tager fejl.</text>
+    </g>
+  </g>
+</svg>

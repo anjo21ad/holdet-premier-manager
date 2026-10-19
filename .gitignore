@@ -1,0 +1,18 @@
+# Data hentes lokalt og maa ikke deles (kildernes vilkaar)
+input/
+exante/
+facit/
+point-historik.json
+
+# Dit eget hold, dine skoen og dine beslutninger
+/hold.json
+/manager_input.json
+/beslutningslog.csv
+
+# Stoej
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
+desktop.ini
+.claude/settings.local.json
