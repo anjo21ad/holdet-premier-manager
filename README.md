@@ -15,6 +15,14 @@ Jeg har bygget en model til Premier Manager på [holdet.dk](https://www.holdet.d
 
 Prognoserne bliver gemt før deadline og holdt op mod resultatet bagefter. En ny regel kommer kun ind, hvis den rammer bedre.
 
+## Inspireret af Marcel
+
+<p align="center"><img src="docs/img/marcel.svg" alt="Marcel: Tom Tangos baseballprognose bruger de seneste tre sæsoner vægtet 5/4/3 og trækker mod gennemsnittet. Her bruges xG og xA fra starter, det typiske for rollen med 1.000 minutters vægt, og minutter i en anden klub tæller halvt. Sakas bud på 0,44 bygger 14 procent på i år, 39 procent på sidste sæson, 23 procent på sæsonen før og 24 procent på det typiske for rollen" width="100%"></p>
+
+Marcel er en prognosemodel fra baseball. Tom Tango lavede den for at vise, hvor langt man kommer med det mest basale: de seneste tre sæsoner vægtet 5/4/3 og et træk mod gennemsnittet, indtil der er data nok. Navnet kommer fra "Marcel the Monkey", fordi den skulle være så enkel, at en abe kunne regne den ud. Alligevel rammer den næsten lige så godt som langt større systemer som PECOTA, ZiPS og Steamer. I baseball er den blevet den målestok, nye prognoser bliver holdt op imod.
+
+Jeg valgte den som udgangspunkt, fordi Premier Manager har præcis samme problem som baseball: få kampe, meget støj og en stærk fristelse til at tro på den seneste form. Marcel løser det med to regler, der kan forklares på en linje hver. Hvert tal kan følges tilbage til de minutter og sæsoner, det bygger på, og modellen har få steder at lade sig narre af tilfældigheder. Oversat til fodbold måler den xG og xA i stedet for mål, kun fra kampe, spilleren starter, og den trækker mod det typiske for spillerens rolle.
+
 ## Sådan virker det
 
 <p align="center"><img src="docs/img/saadan-virker-det.svg" alt="Fra data til beslutning: holdet.dk, understat, Betfair Match Odds og RotoWire går ind i modellen, derefter kvalitetstjek, seks spørgsmål og beslutning" width="100%"></p>
@@ -82,7 +90,7 @@ Modellen er bygget til at undgå den fælde. Min første udgave havde fem lag h�
 
 Modellen lægger tre sæsoner sammen, hvor de nyeste kampe tæller mest, og trækker tallet mod det typiske for spillerens rolle. Jo flere kampe, jo mere vejer spillerens egne tal. Efter cirka elleve kampe vejer de mere end det typiske.
 
-Saka og Palmer viser det i praksis. En god eller dårlig start flytter vurderingen, men overtager den ikke. Idéen er den samme som i baseballmodellen Marcel og i Efron og Morris' arbejde om shrinkage fra 1975.
+Saka og Palmer viser det i praksis. En god eller dårlig start flytter vurderingen, men overtager den ikke. Det er Marcel-princippet i praksis. Efron og Morris viste det samme med batting-gennemsnit i baseball i 1975.
 
 ## Hvad er en handel værd?
 
