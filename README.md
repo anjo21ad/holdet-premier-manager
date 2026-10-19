@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.svg" alt="holdet-premier-manager: forventet værdi pr. spiller og handler, der holder, selv hvis modellen tager fejl" width="100%">
+  <img src="docs/img/banner.svg" alt="holdet-premier-manager: forventet værdi pr. spiller og handler, der holder, selv hvis modellen tager fejl" width="100%">
 </p>
 
 <p align="center">
@@ -9,84 +9,48 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/licens-MIT-blue" alt="MIT-licens"></a>
 </p>
 
-En lille, gennemsigtig model til **Premier Manager** på [holdet.dk](https://www.holdet.dk). Den regner hver spillers forventede værdistigning resten af sæsonen ud fra xG, odds og opstillinger. Derefter anbefaler den kun en handel, hvis handlen også holder, når modellen tager fejl på de måder, vi ved den kan.
+<h3 align="center">Hvem skal du købe, og hvem skal du sælge?</h3>
 
-**Standard er ingen handel.**
+I Premier Manager på [holdet.dk](https://www.holdet.dk) handler det om at få dit hold til at stige i værdi. Projektet giver hver spiller ét tal: hvor meget han forventes at stige resten af sæsonen. Og det giver en klar regel for, hvornår en handel er pengene værd.
 
----
+> [!TIP]
+> **Oftest er svaret: behold dit hold.** En handel koster penge. Den skal bevise, at den er det værd, også hvis modellen tager fejl.
+
+&nbsp;
 
 ## Spillet på et halvt minut
 
-Du har 11 spillere og et budget. Point er det samme som prisændring. Et mål fra en midtbanespiller løfter hans pris med 150.000 kr., et clean sheet giver en forsvarer 50.000 kr., og et gult kort koster 20.000 kr. Kaptajnen tæller dobbelt, kontanter i banken giver 1 % rente pr. runde, og hvert køb koster 1 % i gebyr.
+<p align="center"><img src="docs/img/point-er-pris.svg" alt="Point er pris: en midtbanespiller, der scorer det første mål i en 2-0-udesejr, stiger 262.000 kr. i værdi" width="100%"></p>
 
-Målet er derfor at få holdets samlede værdi til at vokse mest muligt. En handel skal tjene både gebyret og den tabte rente hjem, ellers er den en dårlig handel, selv om den nye spiller er bedre.
+Alt, hvad en spiller gør på banen, bliver til kroner på hans pris. Stiger dine spillere, stiger dit hold. Men hvert køb koster 1 % i gebyr, og penge, der står i spillere, giver ikke rente i banken. En handel skal altså tjene mere, end den koster.
 
-## Hvorfor endnu en model?
+## Den store fælde
 
-Fordi det svære ikke er at finde spillere med høj forventning. Det svære er ikke at blive snydt af dem.
+<p align="center"><img src="docs/img/held-ligner-talent.svg" alt="Held ligner talent: 24 lige gode spillere spreder sig tilfældigt efter tre runder, og den, der ser bedst ud, har haft mest held" width="100%"></p>
 
-Når du leder blandt 600 spillere efter den højeste forventning, finder du systematisk dem, hvor støjen tilfældigvis trækker estimatet op. Det hedder **optimizerens forbandelse** (Smith & Winkler 2006). Projektets første udgave havde fem håndtunede lag. En dag blev otte handelsforslag efterprøvet, og alle otte faldt.
+Det er let at finde en spiller med flotte tal. Det svære er at vide, om tallene er ægte. Tre kampe er for lidt til at skille talent fra held, og leder du blandt 600 spillere efter den, der ser bedst ud, finder du næsten altid den, der har været heldigst. Fænomenet har et navn: *optimizerens forbandelse*.
 
-Svaret blev ikke flere lag, men færre:
+Projektets første udgave faldt selv i fælden. Den havde fem lag af håndlavede justeringer, og da otte forslag til handler blev efterprøvet, holdt ingen af dem.
 
-- **Én fil, tre regler.** Et estimat, der hviler på lidt data, trækkes mod det typiske, indtil der er data nok til at tro på det.
-- **Seks kontroller pr. handel.** Handlen skal holde, også hvis forskellen mellem spillerne er overvurderet, eller spilletiden svigter.
-- **Præregistrering og kalibrering.** Alle prognoser låses før deadline og måles mod det, der skete.
-- **Et kompleksitetsbudget.** Intet nyt lag uden en målt forbedring i backtest.
+## Kuren: tro mest på det, der er set mange gange
 
-## Sådan virker det
+<p align="center"><img src="docs/img/tro-paa-det-sete.svg" alt="Spiller A med 3 kampe og 0,80 xG får budet 0,35. Spiller B med 3 sæsoner og 0,45 xG får budet 0,39" width="100%"></p>
 
-```mermaid
-flowchart LR
-    subgraph Kilder
-        H["holdet.dk<br/>pris · klub · position"]
-        U["understat<br/>minutter · xG · xA"]
-        B["Betfair<br/>Match Odds · begge scorer"]
-        R["RotoWire<br/>opstillinger"]
-    end
-    H & U & B & R --> M["model.py<br/>3 regler + pointformel"]
-    M --> K{"kvalitet.py<br/>STOP ved fejl"}
-    K --> P["praeregistrer.py<br/>prognosen låses"]
-    K --> T["handel.py<br/>6 kontroller"]
-    T --> D["Beslutning<br/>og beslutningslog"]
-    P -. efter runden .-> F["facit_alle.py<br/>realiserede point"]
-    F --> C["kalibrering_alle.py<br/>β · MSE · top-test"]
-    C -. kun målte forbedringer .-> M
-```
+Modellen blander spillerens egne tal med det typiske for hans rolle. Har han spillet få kampe, vejer det typiske mest. Har han spillet mange, vejer hans egne tal mest. Grænsen går ved cirka 11 kampe.
 
-### Modellen: tre regler og én pointformel
+Det lyder banalt, men det er netop det, der skiller en model, der jagter held, fra en, der finder talent.
 
-| | Regel | Hvad den gør |
-|---|---|---|
-| 1 | **Rate (Marcel)** | xG og xA pr. 90 minutter fra **starter** i tre sæsoner, vægtet 1,0 / 0,8 / 0,6. Minutter i en anden klub tæller halvt. Raten trækkes mod medianen for spillerens rolle med 1.000 minutters vægt |
-| 2 | **Spilletid** | Næste runde fra RotoWire. Resten af sæsonen er ½ status + ½ startandel i klubbens seneste 15 kampe |
-| 3 | **Holdstyrke** | Preseason-tier som udgangspunkt, opdateret med de Poisson-λ, der rammer Betfairs priser for sejr og "begge hold scorer" |
-| | **Pointformel** | Spillets regler i `ev_kamp()`. `evaluer()` er det eneste sted, EV beregnes |
+## Hvad er en handel værd?
 
-```
-g90 = (Σ v · xG · 90 + K · prior_rolle) / (Σ v · minutter + K)        K = 1.000 minutter
-```
+<p align="center"><img src="docs/img/handlens-vaerdi.svg" alt="Clarke ud og Neto ind: +620 i forventet vækst, minus 48 i gebyr og 62 i tabt rente, giver +510 tusind kroner" width="100%"></p>
 
-En spiller med 500 vægtede minutter hviler altså 2/3 på prioren. Det er meningen.
+En handel regnes over resten af sæsonen, ikke kun næste runde. Fra gevinsten trækkes gebyret og den rente, du går glip af, fordi pengene nu står i en spiller i stedet for i banken.
 
-### Beslutningsreglen: seks kontroller
+<details>
+<summary><b>Sådan ser det ud i terminalen</b></summary>
+<br>
 
-Gevinsten regnes over resten af sæsonen, netto af gebyr og bankrente. En handel anbefales kun, hvis den er positiv i **alle seks**:
-
-| Kontrol | Spørgsmålet |
-|---|---|
-| basis | Holder den med modellen, som den er? |
-| forskel −25 % | ... hvis forskellen mellem spillerne er overvurderet, som kalibreringen viser (β ≈ 0,75-0,8)? |
-| K/2 | ... hvis vi stoler mere på spillernes egne data? |
-| 2K | ... hvis vi stoler mere på rolleprioren? |
-| ind pS −0,1 | ... hvis de nye spiller mindre end ventet? |
-| ud pS +0,1 | ... hvis de gamle spiller mere end ventet? |
-
-En spiller, hvis rate hviler over 50 % på prioren, anbefales aldrig uden et menneskes vurdering, for modellen kender ham ikke.
-
-### Et eksempel
-
-Eksempelholdet i [`eksempler/hold.json`](eksempler/hold.json) før runde 8 i Efterår 2026. Jack Clarke er på vej ud af Ipswichs startopstilling:
+Eksempelholdet i [`eksempler/hold.json`](eksempler/hold.json) før runde 8 i Efterår 2026:
 
 ```text
 $ python handel.py "Jack Clarke > Pedro Neto"
@@ -104,90 +68,112 @@ IND Pedro Neto (CHE, midfield/AM): g90 0.20  a90 0.23  pS naeste 0.72  pStart 0.
       spilletid: RotoWire-status 0.72, startandel 0.8 over 15 klubkampe
 ```
 
-Regnestykket bag basis: 712 − 92 = +620 tkr i forventet vækst over 13 runder. Gebyret på 1 % af Netos pris koster 48, og den ekstra kapital, der bindes, koster 62 i tabt rente. Netto **+510**. Bemærk også forklaringen: Clarkes tal hviler 61 % på prioren, Netos kun 21 %. Før et tal bruges til en handel, skal man se, hvad det er målt under.
+Hver spiller kommer med en forklaring: hvor mange minutter tallet bygger på, og hvor meget det typiske for rollen vejer. Clarkes tal er 61 % gæt, Netos kun 21 %.
 
-Og her er en handel, der er positiv i alle seks kontroller og alligevel ikke anbefales:
+</details>
 
-```text
-$ python handel.py "Jack Clarke > Jack Rudoni"
+## Seks spørgsmål før hver handel
 
-Clarke > Rudoni
-  basis +569   forskel -25 % +454   K/2 +618   2K +532   ind pS -0,1 +486   ud pS +0,1 +510
-  -> anbefales IKKE (positiv i 6 af 6; vaerst +454 tkr)
+<p align="center"><img src="docs/img/seks-spoergsmaal.svg" alt="Seks spørgsmål: Clarke til Neto holder i alle seks og anbefales. Clarke til Rudoni holder også, men Rudonis tal er 73 procent gæt" width="100%"></p>
 
-  !! Jack Rudoni: raten hviler over 50 % paa prioren - modellen kender ikke spilleren. Kraever manager-vurdering.
+Ingen model er perfekt, og vi ved, hvor denne typisk tager fejl. Den overvurderer forskellen mellem spillere en smule. Den kan stole for meget eller for lidt på en spillers egne tal. Og spilletid er svær at forudsige. Derfor spørger den seks gange, om handlen stadig er god, hvis netop den fejl er sket. Ét nej, og du beholder dit hold.
+
+## Sådan virker det
+
+<p align="center"><img src="docs/img/saadan-virker-det.svg" alt="Fra data til beslutning: holdet.dk, understat, Betfair Match Odds og RotoWire går ind i modellen, derefter kvalitetstjek, seks spørgsmål og beslutning" width="100%"></p>
+
+| Kilde | Hvad den bidrager med |
+|---|---|
+| **holdet.dk** | Priser, klubber og kampprogram |
+| **understat** | Minutter, xG og xA fra hver kamp i tre sæsoner |
+| **Betfair** | Match Odds: hvad markedet tror om hver kamp |
+| **RotoWire** | Forventede startopstillinger til næste runde |
+
+Før hver deadline tjekker modellen sine egne data. Er en fil forældet, eller har en kilde svaret med noget forkert, stopper den i stedet for at regne videre på forkerte tal. Efter hver runde sammenlignes prognoserne med det, der skete.
+
+<details>
+<summary><b>For de nysgerrige: de tre regler og formlen</b></summary>
+<br>
+
+| | Regel | Hvad den gør |
+|---|---|---|
+| 1 | **Rate (Marcel)** | xG og xA pr. 90 minutter fra **starter** i tre sæsoner, vægtet 1,0 / 0,8 / 0,6. Minutter i en anden klub tæller halvt. Raten trækkes mod medianen for spillerens rolle med 1.000 minutters vægt |
+| 2 | **Spilletid** | Næste runde fra RotoWire. Resten af sæsonen er ½ status + ½ startandel i klubbens seneste 15 kampe |
+| 3 | **Holdstyrke** | Udgangspunkt før sæsonen, opdateret med de målforventninger, der passer til Betfairs priser |
+| | **Pointformel** | Spillets regler i `ev_kamp()`. `evaluer()` er det eneste sted, forventningen beregnes |
+
+```
+g90 = (Σ v · xG · 90 + K · typisk_for_rollen) / (Σ v · minutter + K)        K = 1.000 minutter
 ```
 
-### Kvalitetsporte
+De seks kontroller i `handel.py`: basis, forskellen −25 %, K/2, 2K, nye spillere −0,1 i spilletid og gamle spillere +0,1 i spilletid. En spiller, hvis tal er mere end 50 % gæt, anbefales aldrig uden et menneskes vurdering.
 
-Datakilderne fejler tavst. understat svarer 404-HTML på 461 bytes uden den rigtige header, holdet.dk svarer 200 med en HTML-skal på forkerte stier, og Betfair kan levere det forkerte marked uden at klage. Hver af de fælder er blevet til en port i `kvalitet.py`, som stopper med exit-kode 1, før der træffes en beslutning på forkerte data.
+Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
 
-## Evidens
+</details>
 
-Facit regnes fra understat og rammer holdets egne point kroneeksakt for **90-97 %** af spillerne.
+## Virker det?
 
-Backtest på 808 spiller-runder (R4-R5, Efterår 2026), sammenlignet med projektets første, lagdelte model:
+<p align="center"><img src="docs/img/virker-det.svg" alt="For spillere med under 5 kampes data var den første models hældning 0,34 og denne models 0,96. Over 15 kampe 1,16 mod 0,95" width="100%"></p>
 
-| | MSE | β, under 5 kampes evidens | β, over 15 kampes evidens |
-|---|---:|---:|---:|
-| Første model, fem lag | 3.504 | 0,34 | 1,16 |
-| Denne model | **3.258** | **0,96** | 0,95 |
+Alle prognoser skrives ned før runden og kan ikke rettes bagefter. Efter runden måles det, hvor meget af forskellen mellem spillerne der holdt. For spillere med få kampe var den første models forskelle mest held. Den nye model rammer næsten præcist.
 
-β er hældningen, når realiserede point regresseres på prognosen. 1 betyder kalibreret, under 1 betyder, at prognoserne spreder sig mere end virkeligheden. For spillere med tynd evidens var den første models forskelle mest støj. Shrinkagen fjernede det. Det svage punkt er spillere med 5-15 kampes evidens, og det følges runde for runde. Detaljer i [docs/metode.md](docs/metode.md).
+Det svage punkt er spillere med 5-15 kampe bag sig. Det følges runde for runde, og modellen ændres kun, hvis en ændring beviseligt hjælper. Pointberegningen bag målingen rammer holdets egne tal kroneeksakt for 90-97 % af spillerne.
 
-## Kom i gang
+## Prøv det selv
 
-Kræver Python 3.10 eller nyere og intet andet.
+Du skal bruge Python 3.10 eller nyere. Andet kræves ikke.
 
 ```bash
 git clone https://github.com/anjo21ad/holdet-premier-manager.git
 cd holdet-premier-manager
 cp eksempler/hold.json eksempler/manager_input.json .    # ret hold.json til dit eget hold
 
-python hent.py holdet                       # priser, klubber og kampplan
+python hent.py holdet                       # priser, klubber og kampprogram
 python hent.py liga && python hent.py liga 2025
 python hent.py rotowire 8                   # højst 24 timer før deadline
 python hent.py betfair 8                    # kræver miljøvariablen BETFAIR_AK
 
 python model.py 8                           # første gang hentes spillerhistorik (~5 min)
 python facit_alle.py                        # realiserede point hidtil
-python kvalitet.py --runde 8                # STOP = ingen beslutning på disse data
-python handel.py --skan "Jack Clarke"       # de bedste afløsere, vurderet i alle seks kontroller
+python kvalitet.py --runde 8                # STOP betyder: ingen beslutning på disse data
+python handel.py --skan "Jack Clarke"       # de bedste afløsere, vurderet i alle seks spørgsmål
 ```
 
-Testene kører uden data: `python test_model.py`.
+Testene kører uden data: `python test_model.py`. Hele rytmen før deadline og efter hver runde står i [docs/arbejdsgang.md](docs/arbejdsgang.md).
 
-Hele rytmen før deadline og efter hver runde står i [docs/arbejdsgang.md](docs/arbejdsgang.md).
-
-## Indhold
+<details>
+<summary><b>Hvad ligger hvor</b></summary>
+<br>
 
 | | |
 |---|---|
-| `hent.py` | Al hentning fra holdet.dk, understat, Betfair og RotoWire |
+| `hent.py` | Henter fra holdet.dk, understat, Betfair og RotoWire |
 | `model.py` | De tre regler og pointformlen. Skriver `input/board.json` |
-| `handel.py` | Seks kontroller pr. handel, `--skan` efter afløsere og `--log` til beslutningsloggen |
-| `kvalitet.py` | Porte før en beslutning. Exit-kode 1 ved STOP |
-| `praeregistrer.py` | Låser hele boardets prognose før deadline. Nægter at overskrive |
-| `facit_alle.py` | Realiserede point for alle spillere ud fra understat |
-| `kalibrering_alle.py` | β, MSE og top-test pr. præregistrering |
-| `test_model.py` | Tests af regler, beslutningsregel, porte og pointmotor på syntetiske data |
+| `handel.py` | Seks spørgsmål pr. handel, `--skan` efter afløsere og `--log` til en beslutningslog |
+| `kvalitet.py` | Tjekker data før en beslutning og stopper ved fejl |
+| `praeregistrer.py` | Låser alle prognoser før deadline. Nægter at overskrive |
+| `facit_alle.py` | Regner de faktiske point ud for alle spillere |
+| `kalibrering_alle.py` | Måler prognoserne mod facit |
+| `test_model.py` | Tests på opdigtede spillere og kampe |
 | `docs/` | [Metode](docs/metode.md), [pointsystem](docs/pointsystem.md) og [arbejdsgang](docs/arbejdsgang.md) |
 | `eksempler/` | Skabeloner til `hold.json` og `manager_input.json` |
 
+</details>
+
 ## Begrænsninger
 
-- Bygget til **Premier Manager Efterår 2026**. Til et nyt spil skal spil-id, sæsoner og preseason-tiers rettes ([se hvordan](docs/arbejdsgang.md#en-ny-sæson)).
-- Straffe ligger i xG. En spiller, der har overtaget straffesparkene, er undervurderet.
-- Spilletiden for nye klubspillere hviler meget på én RotoWire-status.
-- Betfair prissætter kun én runde pålideligt frem. Resten af sæsonen regnes på holdstyrken.
-- Genkøb af en skadet spiller efter en midlertidig afløser regnes ikke automatisk. Regn det runde for runde.
+- Bygget til **Premier Manager Efterår 2026**. Til et nyt spil skal spil-id, sæsoner og udgangspunktet for holdene rettes ([se hvordan](docs/arbejdsgang.md#en-ny-sæson)).
+- Straffespark ligger i xG. En spiller, der lige har overtaget straffesparkene, er undervurderet.
+- Nye spillere i en klub får deres spilletid fra meget få kampe.
+- Betfair prissætter kun næste runde pålideligt. Resten af sæsonen regnes på holdstyrken.
 
 ## Data og vilkår
 
-Repoet indeholder **ingen data**. Scripts henter fra holdet.dk, understat, Betfair og RotoWire til din egen maskine, og `input/`, `exante/` og `facit/` er gitignoreret. Du er selv ansvarlig for at bruge kilderne efter deres vilkår, og de hentede filer må ikke deles videre.
+Repoet indeholder **ingen data**. Scriptsene henter fra holdet.dk, understat, Betfair og RotoWire til din egen maskine, og mapperne med data deles aldrig. Du er selv ansvarlig for at bruge kilderne efter deres vilkår.
 
 Projektet er ikke tilknyttet holdet.dk, understat, Betfair eller RotoWire.
 
 ## Licens
 
-[MIT](LICENSE).
+[MIT](LICENSE)
