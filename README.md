@@ -13,9 +13,9 @@
 
 En model til Premier Manager på [holdet.dk](https://www.holdet.dk), udviklet og brugt runde for runde i Efterår 2026. Den giver hver spiller i spillet ét tal: hvor meget han forventes at stige i værdi resten af sæsonen. Og den giver en klar regel for, hvornår en handel er pengene værd.
 
-Hver prognose skrives ned før deadline og måles bagefter mod det, der skete. Modellen ændres kun, når en ændring beviseligt giver bedre prognoser.
+Hver prognose skrives ned før deadline og måles bagefter mod det, der skete. Modellen ændres kun, når en ændring beviseligt giver bedre prognoser. Holdet bag projektet ligger nr. 69 af over 28.000 efter 7 runder.
 
-<p align="center"><img src="docs/img/testet.svg" alt="Bygget og testet i virkeligheden: cirka 590 spillere vurderes før hver deadline, 808 spiller-runder i backtest, 90-97 procent kroneeksakt pointberegning og seks kontroller pr. handel" width="100%"></p>
+<p align="center"><img src="docs/img/testet.svg" alt="Bygget og testet i virkeligheden: holdet bag projektet er nr. 69 af over 28.000 hold efter 7 runder. Cirka 590 spillere vurderes før hver deadline, 808 spiller-runder i backtest, 90-97 procent kroneeksakt pointberegning og seks kontroller pr. handel" width="100%"></p>
 
 > [!TIP]
 > **Oftest er svaret: behold dit hold.** En handel koster penge. Den skal bevise, at den er det værd, også hvis modellen tager fejl.
