@@ -59,9 +59,9 @@ Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
 
 ## Mit hold: Skjoldes Juveler
 
-<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 8, nr. 69 af over 28.000 hold efter syv runder: Raya; Calafiori, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Thiago, Haaland (kaptajn), Kostoulas. Rundens handel: Koumas ud, Schade ind, +526 tusind kroner over resten af sæsonen og ja i alle seks spørgsmål" width="100%"></p>
+<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 8, nr. 79 af over 28.000 hold efter syv runder: Raya; Calafiori, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Thiago, Haaland (kaptajn), Kostoulas. Rundens handel: Koumas ud, Schade ind, +526 tusind kroner over resten af sæsonen og ja i alle seks spørgsmål" width="100%"></p>
 
-Mit hold hedder **Skjoldes Juveler** og ligger nr. 69 af over 28.000 efter syv runder. Jeg bruger modellen, hver gang jeg overvejer en handel.
+Mit hold hedder **Skjoldes Juveler** og ligger nr. 79 af over 28.000 efter syv runder. Jeg bruger modellen, hver gang jeg overvejer en handel.
 
 Før runde 8 skifter jeg Koumas ud med Schade. Koumas kom på bænken, da Isak var tilbage hos Liverpool, og Schade er klar igen efter en skulderskade. Modellen regner handlen til 526.000 kr. over resten af sæsonen, og den holder i alle seks spørgsmål. Kortet bliver opdateret efter hver runde.
 
