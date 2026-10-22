@@ -57,6 +57,14 @@ Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
 
 </details>
 
+## Et regnestykke: Calafiori mod Everton
+
+<p align="center"><img src="docs/img/calafiori.svg" alt="Calafiori mod Everton hjemme i runde 8 giver 75,5 tusind kroner i forventet vækst. Arsenal giver 45,9: clean sheet 19,0, holdmål 16,6, resultat 15,7, mål imod minus 4,9 og nederlag hjemme minus 0,5. Calafiori selv giver 27,6: mål 19,4, assist 3,8, skud på mål 3,4 og sejrsmål og udligning 1,0. At være med giver 2,0: på banen 6,0 og gult kort minus 4,0. Inputs: 68 procent chance for sejr, Everton scorer ikke i 47 procent, 92 procent chance for at starte, 0,134 xG og 0,077 xA pr. 90 minutter" width="100%"></p>
+
+Sådan bliver tallene til kroner for én spiller. Calafiori ventes at stige 75.500 kr., når Arsenal tager imod Everton i runde 8. Hvert led er en chance gange det, spillets regler giver, gange hvor meget han ventes at spille.
+
+61 % af det kommer fra Arsenal og ikke fra Calafiori selv. Køber du en forsvarer, køber du hans hold. For Haaland er det omvendt: 78 % af hans forventede vækst kommer fra hans egne mål og chancer.
+
 ## Mit hold: Skjoldes Juveler
 
 <p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 8, nr. 79 af over 28.000 hold efter syv runder: Raya; Calafiori, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Thiago, Haaland (kaptajn), Kostoulas. Rundens handel: Koumas ud, Schade ind, +526 tusind kroner over resten af sæsonen og ja i alle seks spørgsmål" width="100%"></p>
