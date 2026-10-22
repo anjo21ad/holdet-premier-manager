@@ -65,8 +65,6 @@ Mit hold hedder **Skjoldes Juveler** og ligger nr. 79 af over 28.000 efter syv r
 
 Før runde 8 skifter jeg Koumas ud med Schade. Koumas kom på bænken, da Isak var tilbage hos Liverpool, og Schade er klar igen efter en skulderskade. Modellen regner handlen til 526.000 kr. over resten af sæsonen, og den holder i alle seks spørgsmål. Kortet bliver opdateret efter hver runde.
 
-<p align="center"><img src="docs/img/testet.svg" alt="Brugt i hver runde siden sæsonstart: cirka 590 spillere vurderes før hver deadline, 808 spiller-runder i backtest, 90-97 procent af pointene regnet på kronen og seks kontroller pr. handel" width="100%"></p>
-
 > [!TIP]
 > **Oftest er svaret at beholde holdet.** En handel koster gebyr og rente, så den skal kunne betale sig, også hvis tallene er lidt for optimistiske.
 
