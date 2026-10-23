@@ -31,12 +31,6 @@ I Premier Manager er point det samme som prisændring. Alt, hvad en spiller gør
 
 Modellens mål er derfor holdets samlede værdi, netto af gebyr og rente. Det handler ikke om at eje de spillere, der giver mest pr. million, men om det hold, der giver mest i alt.
 
-<p align="center"><img src="docs/img/total-frem-for-pr-mio.svg" alt="Samme 59,0 mio., to hold. Bedst pr. million: spillere for 43,5 mio., 15,1 mio. i banken, 230 pr. million og 11.521 tusind kr. i alt. Mest i alt: spillere for 50,3 mio., 8,3 mio. i banken, 222 pr. million og 11.716 tusind kr. i alt. Forskellen er tre pladser: Bogle til Calafiori giver 171 pr. ekstra million, Lacroix til Gabriel 179 og Ndiaye til Barcola 163. En million i spillere koster 141 i tabt rente og gebyr" width="100%"></p>
-
-Pr. million er et gennemsnit. Hvor pengene skal stå, afgøres af den næste million. Holdet til venstre får mest ud af hver million, det bruger, men lader 15,1 mio. stå i banken. Holdet til højre bruger 6,8 mio. mere på tre pladser, hvor hver ekstra million giver 163-179 tusind kr., mens den kun koster 141 i tabt rente og gebyr. Det giver 195.000 kr. mere i alt.
-
-Reglen er derfor ikke at købe de billigste gode spillere. Brug pengene, så længe den næste million giver mere, end den koster, og lad resten stå i banken.
-
 ## Data: fire kilder
 
 <p align="center"><img src="docs/img/saadan-virker-det.svg" alt="Fra data til beslutning: holdet.dk, understat, Betfair Match Odds og RotoWire går ind i modellen, derefter kvalitetstjek, seks kontroller og beslutning" width="100%"></p>
