@@ -48,7 +48,7 @@ Før hver deadline tjekker `kvalitet.py` data. Er en fil for gammel, eller har e
 
 <p align="center"><img src="docs/img/held-ligner-talent.svg" alt="Held ligner talent: 24 lige gode spillere spreder sig tilfældigt efter tre runder, og den, der ser bedst ud, har haft mest held" width="100%"></p>
 
-Det er let at finde en spiller med flotte tal. Det svære er at vide, om tallene er ægte. Få kampe er for lidt til at skille talent fra held. Leder du blandt 600 spillere efter den, der ser bedst ud, finder du som regel den heldigste. Det kaldes *optimizerens forbandelse* (Smith & Winkler 2006).
+Det er let at finde en spiller med flotte tal. Det svære er at vide, om tallene er ægte. Få kampe er for lidt til at skille talent fra held. Leder du blandt 600 spillere efter den, der ser bedst ud, finder du som regel den heldigste.
 
 Modellen er bygget til at undgå den fælde. Min første udgave havde fem lag håndlavede justeringer, og da jeg efterprøvede otte forslag til handler, holdt ingen af dem. Så byggede jeg den om fra bunden med få regler og en fast test af hver handel.
 
