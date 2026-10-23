@@ -11,13 +11,13 @@
 
 <h3 align="center">Hvem skal du købe, og hvem skal du sælge?</h3>
 
-Jeg har bygget en model til Premier Manager på [holdet.dk](https://www.holdet.dk) og brugt den på mit eget hold i hver runde siden sæsonstart. Den giver alle spillere ét tal: hvor meget de ventes at stige i værdi resten af sæsonen. Og den har en fast regel for, hvornår en handel betaler sig.
+Denne model er lavet til Premier Manager på [holdet.dk](https://www.holdet.dk) og er brugt på mit eget hold i hver runde siden sæsonstart. Den giver alle spillere ét tal: hvor meget de ventes at stige i værdi resten af sæsonen. Og den har en fast regel for, hvornår en handel betaler sig.
 
 **Mit hold, Skjoldes Juveler, ligger nr. 79 af over 28.000 efter syv runder.** Syv runder er for lidt til at skille dygtighed fra held, så det er et godt tegn og ikke et bevis. Hvorfor står under [Den store fælde](#den-store-fælde-held-ligner-talent).
 
 ## Hvorfor har jeg lavet det her?
 
-Jeg synes, det er sjovt at bruge data til at finde de fordele, andre overser. Den idé har fascineret mig, siden jeg så *Moneyball*.
+Jeg synes, det er grineren at bruge data til at finde muligheder, som andre overser. Derudover kan jeg bare godt lide at vinde. Filmen Moneyball har ligeledes været en stor inspirationskilde til projektet.
 
 I Moneyball har Oakland Athletics et af ligaens mindste budgetter. I stedet for at betale for det, alle kan se, som slaggennemsnit og homeruns, køber de spillere, der kommer på base. Det vinder kampe, og markedet prissatte det for lavt.
 
@@ -50,7 +50,7 @@ Før hver deadline tjekker `kvalitet.py` data. Er en fil for gammel, eller har e
 
 Det er let at finde en spiller med flotte tal. Det svære er at vide, om tallene er ægte. Få kampe er for lidt til at skille talent fra held. Leder du blandt 600 spillere efter den, der ser bedst ud, finder du som regel den heldigste.
 
-Modellen er bygget til at undgå den fælde. Min første udgave havde fem lag håndlavede justeringer, og da jeg efterprøvede otte forslag til handler, holdt ingen af dem. Så byggede jeg den om fra bunden med få regler og en fast test af hver handel.
+Modellen er bygget til at undgå den fælde. Den første udgave havde fem lag håndlavede justeringer, og da otte forslag til handler blev efterprøvet, holdt ingen af dem. Derfor blev modellen bygget om fra bunden med få regler og en fast test af hver handel.
 
 ## Principperne: tre regler
 
