@@ -62,7 +62,7 @@ Premier Manager har samme problem som baseball: få kampe, meget støj og en st�
 
 <p align="center"><img src="docs/img/tro-paa-det-sete.svg" alt="Saka har 0,69 xG i år mod 0,35 før, og modellen siger 0,44. Palmer har 0,29 i år mod 0,45 før, og modellen siger 0,38" width="100%"></p>
 
-Jo flere kampe, jo mere vejer spillerens egne tal. Efter cirka elleve kampe vejer de mere end det typiske for rollen. Saka og Palmer viser, hvordan det virker: en god eller dårlig start flytter vurderingen, men overtager den ikke. Efron og Morris viste det samme med batting-gennemsnit i baseball i 1975.
+Jo flere kampe, jo mere vejer spillerens egne tal. Efter cirka elleve kampe vejer de mere end det typiske for rollen. Saka og Palmer viser, hvordan det virker: en god eller dårlig start flytter vurderingen, men overtager den ikke.
 
 **Spilletid kommer fra opstillingerne.** Næste runde regnes på RotoWires forventede opstilling. Resten af sæsonen er halvt RotoWire og halvt den andel af klubbens seneste 15 kampe, spilleren har startet.
 
@@ -101,7 +101,7 @@ Sådan bliver tallene til kroner for én spiller. Calafiori ventes at stige 76.1
 
 Regnestykket gentages for hver kamp resten af sæsonen og for hver af de 589 spillere i spillet. For Calafiori giver det 903.000 kr. og en plads som nr. 2 blandt forsvarerne.
 
-Næsten halvdelen af spillerne ventes at give under 100.000 kr., fordi de sjældent starter. De interessante handler ligger blandt de få punkter til højre, og det er netop dér, held nemmest ligner talent.
+Næsten halvdelen af spillerne ventes at give under 100.000 kr., fordi de sjældent starter. De gode handler skal findes blandt de få spillere længst til højre.
 
 ## Før en handel anbefales
 
