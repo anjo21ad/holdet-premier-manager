@@ -85,25 +85,27 @@ Regler, som koden ikke selv håndhæver:
 
 Facit kommer fra understat og er valideret mod holdets egne point: 90-97 % af spillerne rammes kroneeksakt i de første tre runder.
 
-**Kalibrering af den første, lagdelte model** (prognoser efter R3 mod realiserede point i R4-R5, 808 spiller-runder):
+**Backtest på R4-R5.** Den første, lagdelte models prognoser efter R3 mod realiserede point i R4-R5, og den nuværende model regnet bagefter på de samme 824 spiller-runder (`kalibrering_alle.py --sammenlign`, genberegnet 23/10 på det opdaterede facit):
 
-| Evidens bag prognosen | β |
-|---|---|
-| ≥ 15 hele kampe | 1,16 |
-| 5-15 | 0,64 |
-| < 5 | **0,34**: prognosens forskelle var mest støj |
+| | MSE | β alle | β < 5 | β 5-15 | β ≥ 15 | top 5 % leveret |
+|---|---:|---:|---:|---:|---:|---:|
+| Første model | 3.436 | 0,78 | **0,37** | 0,64 | 1,16 | 97 % |
+| Nuværende, uden RotoWire og Betfair for runden | 3.439 | 0,88 | 0,99 | 0,32 | 1,05 | 98 % |
+| Nuværende, fuld | **3.200** | 0,84 | 0,95 | 0,31 | 0,95 | 89 % |
 
-**Backtest af den nuværende model** på samme spillere og runder:
+I den første model var forskellene for spillere med under 5 kampe mest støj (β 0,37). Shrinkagen rettede det i backtesten. Den samlede fejl faldt 7 %, og hele faldet kom fra RotoWire og Betfair for runden.
 
-| | MSE | β alle | β < 5 | β 5-15 | β ≥ 15 |
-|---|---:|---:|---:|---:|---:|
-| Første model | 3.504 | 0,77 | 0,34 | 0,64 | 1,16 |
-| Nuværende, uden RotoWire og Betfair for runden | 3.506 | 0,87 | **0,96** | 0,32 | 1,05 |
-| Nuværende, fuld | **3.258** | 0,83 | **0,96** | 0,31 | 0,95 |
+**Præregistrerede runder.** Den nuværende models prognoser låst med `praeregistrer.py` før deadline (`exante/r6-ny2.json`, `exante/r7.json`). Modellen blev rettet én gang mellem de to runder.
 
-Shrinkagen gjorde det, den skulle: spillere med tynd evidens er nu kalibreret (β 0,96 mod 0,34).
+| | n | β alle | β < 5 | β 5-15 | β ≥ 15 | top 5 % leveret |
+|---|---:|---:|---:|---:|---:|---:|
+| R6 | 472 | 0,74 | 1,28 | 0,31 | 0,81 | 72 % |
+| R7 | 472 | 1,03 | 0,36 | 0,94 | 1,08 | 100 % |
+| R6 og R7 samlet | 944 | **0,90** (SE 0,07) | 0,85 (0,18) | **0,62** (0,16) | 0,96 (0,09) | 86 % |
 
-**Vagtpunktet** er spillere med 5-15 kampes evidens (β omkring 0,3), også i den første runde uden for stikprøven. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
+Samlet ligger hældningen inden for de 25 %, som kontrollen "forskel −25 %" dækker. De enkelte evidensgrupper svinger meget fra runde til runde, så de læses samlet og med standardfejl.
+
+**Vagtpunktet** er spillere med 5-15 kampes evidens: β 0,31 i backtesten og 0,62 samlet uden for stikprøven. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
 
 **Afvist efter kompleksitetsbudgettet,** fordi de ikke gav en målbar forskel: en prisprior pr. rolle og prisinterval samt spilletidsvinduer på 5, 8 og 10 kampe (Brier 0,207-0,209).
 
