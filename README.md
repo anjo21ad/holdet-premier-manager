@@ -138,7 +138,7 @@ Under hver spiller står, hvad tallet bygger på: antal minutter, hvor meget det
 
 <p align="center"><img src="docs/img/seks-spoergsmaal.svg" alt="Seks kontroller: Foden til Mbeumo holder i alle seks og anbefales. Rice til Rogers er positiv i basis, men fejler tre af de seks" width="100%"></p>
 
-En handel, der kun er god, hvis modellen har helt ret, er ikke god nok. Målingerne viser tre steder, hvor prognoser som disse rammer ved siden af, og hver kontrol regner handlen igen, som om en af fejlene var sket:
+Modellen kan tage fejl, så en handel skal også betale sig, hvis den gør. Målingerne viser tre steder, hvor prognoser som disse rammer ved siden af, og hver kontrol regner handlen igen, som om en af fejlene var sket:
 
 | Kendt fejl | Kontrol |
 |---|---|
