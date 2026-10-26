@@ -13,7 +13,7 @@
 
 Denne model er lavet til Premier Manager på [holdet.dk](https://www.holdet.dk) og er brugt på mit eget hold i hver runde siden sæsonstart. Den giver alle spillere ét tal: hvor meget de ventes at stige i værdi resten af sæsonen. Og den har en fast regel for, hvornår en handel betaler sig.
 
-**Mit hold, Skjoldes Juveler, ligger nr. 79 af over 28.000 efter syv runder.** Syv runder er for lidt til at skille dygtighed fra held, så det er et godt tegn og ikke et bevis. Hvorfor står under [Den store fælde](#den-store-fælde-held-ligner-talent).
+**Mit hold, Skjoldes Juveler, ligger nr. 38 af over 28.000 efter otte runder.** Otte runder er for lidt til at skille dygtighed fra held, så det er et godt tegn og ikke et bevis. Hvorfor står under [Den store fælde](#den-store-fælde-held-ligner-talent).
 
 ## Hvorfor har jeg lavet det her?
 
@@ -153,9 +153,9 @@ Sammen med basis, altså modellens bedste bud, giver det seks kontroller. Ét ne
 
 ### Rundens handel
 
-<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 8, nr. 79 af over 28.000 hold efter syv runder: Raya; Calafiori, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Thiago, Haaland (kaptajn), Kostoulas. Rundens handel: Koumas ud, Schade ind, +526 tusind kroner over resten af sæsonen og ja i alle seks kontroller" width="100%"></p>
+<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 8, nr. 38 af over 28.000 hold efter otte runder: Raya; Calafiori, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Thiago, Haaland (kaptajn), Kostoulas. Rundens handel: Koumas ud, Schade ind, +526 tusind kroner over resten af sæsonen og ja i alle seks kontroller" width="100%"></p>
 
-Før runde 8 skifter jeg Koumas ud med Schade. Koumas kom på bænken, da Isak var tilbage hos Liverpool, og Schade er klar igen efter en skulderskade. Modellen regnede handlen til 526.000 kr. over resten af sæsonen, og den holdt i alle seks kontroller. Kortet bliver opdateret efter hver runde.
+Før runde 8 skiftede jeg Koumas ud med Schade. Koumas kom på bænken, da Isak var tilbage hos Liverpool, og Schade er klar igen efter en skulderskade. Modellen regnede handlen til 526.000 kr. over resten af sæsonen, og den holdt i alle seks kontroller. Kortet bliver opdateret efter hver runde.
 
 ## Virker det?
 
