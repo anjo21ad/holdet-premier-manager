@@ -50,13 +50,15 @@ Før hver deadline tjekker `kvalitet.py` data. Er en fil for gammel, eller har e
 
 Det er let at finde en spiller med flotte tal. Det svære er at vide, om tallene er ægte. Få kampe er for lidt til at skille talent fra held. Leder du blandt 600 spillere efter den, der ser bedst ud, finder du som regel den heldigste.
 
-Modellen er bygget til at undgå den fælde. Den første udgave havde fem lag håndlavede justeringer, og da otte forslag til handler blev efterprøvet, holdt ingen af dem. Derfor blev modellen bygget om fra bunden med få regler og en fast test af hver handel.
-
 ## Principperne: tre regler
+
+Hver spillers tal bygger på tre regler: hvor meget han skaber, når han er på banen, hvor meget han spiller, og hvor stærkt hans hold er.
+
+### 1. Hvad spilleren skaber: Marcel
 
 <p align="center"><img src="docs/img/marcel.svg" alt="Marcel: Tom Tangos baseballprognose bruger de seneste tre sæsoner vægtet 5/4/3 og trækker mod gennemsnittet. Her bruges xG og xA fra starter, det typiske for rollen med 1.000 minutters vægt, og minutter i en anden klub tæller halvt. Sakas bud på 0,44 bygger 14 procent på i år, 39 procent på sidste sæson, 23 procent på sæsonen før og 24 procent på det typiske for rollen" width="100%"></p>
 
-**Spillerens rate følger Marcel.** Marcel er en prognosemodel fra baseball. Tom Tango lavede den for at vise, hvor langt man kommer med det mest basale: de seneste tre sæsoner vægtet 5/4/3 og et træk mod gennemsnittet, indtil der er data nok. Navnet kommer fra "Marcel the Monkey", fordi den skulle være så enkel, at en abe kunne regne den ud.
+Marcel er en prognosemodel fra baseball. Tom Tango lavede den for at vise, hvor langt man kommer med det mest basale: de seneste tre sæsoner vægtet 5/4/3 og et træk mod gennemsnittet, indtil der er data nok. Navnet kommer fra "Marcel the Monkey", fordi den skulle være så enkel, at en abe kunne regne den ud. Tabellen viser Marcels fire byggesten, og hvordan de er oversat til fodbold.
 
 Premier Manager har samme problem som baseball: få kampe, meget støj og en stærk fristelse til at tro på den seneste form. Oversat til fodbold måler modellen xG og xA i stedet for mål, kun fra kampe, spilleren starter, og trækker mod det typiske for spillerens rolle. Hvert tal kan følges tilbage til de minutter og sæsoner, det bygger på.
 
@@ -64,9 +66,13 @@ Premier Manager har samme problem som baseball: få kampe, meget støj og en st�
 
 Jo flere kampe, jo mere vejer spillerens egne tal. Efter cirka elleve kampe vejer de mere end det typiske for rollen. Saka og Palmer viser, hvordan det virker: en god eller dårlig start flytter vurderingen, men overtager den ikke.
 
-**Spilletid kommer fra opstillingerne.** Næste runde regnes på RotoWires forventede opstilling. Resten af sæsonen er halvt RotoWire og halvt den andel af klubbens seneste 15 kampe, spilleren har startet.
+### 2. Spilletid: opstillingerne
 
-**Holdstyrken kommer fra markedet.** Hvert hold har et udgangspunkt fra før sæsonen, som hver runde opdateres med de målforventninger, der passer til Betfairs odds. Næste kamp regnes direkte på oddsene.
+Næste runde regnes på RotoWires forventede opstilling. Resten af sæsonen er halvt RotoWire og halvt den andel af klubbens seneste 15 kampe, spilleren har startet.
+
+### 3. Holdstyrke: markedet
+
+Hvert hold har et udgangspunkt fra før sæsonen, som hver runde opdateres med de målforventninger, der passer til Betfairs odds. Næste kamp regnes direkte på oddsene.
 
 <details>
 <summary><b>For de nysgerrige: reglerne og formlen</b></summary>
