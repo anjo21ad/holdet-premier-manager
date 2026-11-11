@@ -37,7 +37,7 @@ Tallene herunder er regelsæt 119 (Efterår 2026), kontrolleret mod hele feltets
 
 | | |
 |---|---|
-| Kaptajn | Kaptajnens vækst tælles én gang til og udbetales i banken |
+| Kaptajn | Kaptajnens vækst tælles én gang til og udbetales i banken, dog mindst 0: et fald trækkes ikke fra (kontrolleret mod appens total efter runde 9 og 10) |
 | Bankrente | 1 % pr. runde af kontantbeholdningen |
 | Gebyr | 1 % af købsprisen. Et fortrudt køb i samme vindue er gebyrfrit |
 | Klubloft | Højst 4 spillere fra samme klub |

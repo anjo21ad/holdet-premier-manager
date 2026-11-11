@@ -17,7 +17,7 @@ Derfor blev hele kæden erstattet af én fil med tre regler, hver begrundet i fo
 ### 1. Rate (Marcel)
 
 ```
-g90 = (Σ v · xG · 90 + K · prior_rolle) / (Σ v · minutter + K)
+g90 = (Σ v · npxG · 90 + K · prior_rolle) / (Σ v · minutter + K) + straffeled
 ```
 
 - Kun **starter** tæller. Indskiftninger mod trætte forsvar giver en skæv rate.
@@ -25,7 +25,8 @@ g90 = (Σ v · xG · 90 + K · prior_rolle) / (Σ v · minutter + K)
 - Minutter for **en anden klub** tæller halvt. xG pr. 90 minutter persisterer omkring 0,6 fra sæson til sæson, men kun omkring 0,4 efter et klubskifte.
 - **K = 1.000 minutter**, omtrent 11 kampe. Under ti kampe er xG for ustabilt til at stå alene.
 - **Prioren** er medianen for spillerens rolle (CB, FB, CM, AM, FW), udledt af data hver gang modellen kører. Rollen er den position, spilleren har startet flest minutter på.
-- Samme regel giver a90 med xA.
+- **Straffe** er et separat led. Raten bygger på xG uden straffe (npxG), og bagefter lægges ligaens straffe-xG pr. holdkamp (0,079) gange spillerens andel af klubbens straffe-xG i sidste og denne sæson til.
+- Samme regel giver a90 med xA, uden straffeled.
 
 En spiller med 500 vægtede minutter hviler altså 2/3 på prioren. Det er meningen.
 
@@ -34,9 +35,9 @@ En spiller med 500 vægtede minutter hviler altså 2/3 på prioren. Det er menin
 | | Kilde |
 |---|---|
 | Næste runde | RotoWire: XI 0,92 · XI og tvivlsom 0,70 · tvivlsom 0,25 · ude 0,02 · ellers 0,14 |
-| Resten af sæsonen | ½ status + ½ startandel i klubbens seneste 15 kampe med spilleren i klubben |
+| Resten af sæsonen | ½ status + ½ startandel i klubbens seneste 15 kampe med spilleren i klubben, trukket mod status med 3 kampe |
 
-Uden RotoWire for en klub bruges startandelen, trukket mod 0,14 med to kampe. Under 5 kampe for klubben bruges kun status.
+Uden RotoWire for en klub bruges startandelen, trukket mod 0,14 med to kampe. Startandelen trækkes altid mod status med tre kampes vægt, så en spiller med få kampe for klubben ikke længere springer fra kun status til fuld startandel ved den femte kamp.
 
 ### 3. Holdstyrke
 
@@ -81,9 +82,29 @@ Regler, som koden ikke selv håndhæver:
 - **Regn altid netto af kapitalomkostningen.** En opgradering, der binder 1M ekstra i 13 runder, koster 130.000 i tabt rente.
 - **En skadet spiller regnes med genkøb.** En midlertidig afløser og et genkøb koster to gebyrer, men brudpunktet er typisk omkring to runder. Hold banken klar til genkøbet.
 
+## Datakilderne i november 2026
+
+To af de fire kilder svigter:
+
+- **understat** har været nede siden 2. november og svarer kun med en vedligeholdelsesside.
+- **Betfair** lukker for danske kunder 18. november. Om de offentlige priser stadig kan hentes fra en dansk IP bagefter, er uvist.
+
+Erstatningerne er testet mod de gamle kilder, men endnu ikke bygget ind:
+
+| Kilde | Erstatter | Testet |
+|---|---|---|
+| Pinnacle (åbent guest-API) | Betfair: 1X2, totaler og holdtotaler | 1X2 for runde 11 lå i gennemsnit 0,5 procentpoint fra Betfair, højst 1,3, over ni kampe |
+| FotMob | understat: skudkort med xG og situation pr. skud, opstillinger | Skudniveauet gør det muligt at skille straffe fra og køre koncentrationstesten som før |
+| FPL (officielt API) | understat: xG, xA, minutter og starter pr. kamp | Korrelation 0,977 med understats xG i runde 1-8 over 183 spillere. FPL bruger Opta-skalaen, som ligger lavere: xG skal ganges med 1,107 og xA med 1,27 |
+| holdet.dk | understat som facit | Point er prisændring, så holdets egne priser er facit |
+
+En ny kilde er også en ny parameter, så den følger kompleksitetsbudgettet: den tages først ind, når backtesten på runde 4-8 ikke bliver dårligere med den. Indtil da regnes runderne på understat-data til og med runde 8. Runde 9 og frem lægges ind fra FPL som et tjek ved siden af modellen, og `kvalitet.py` stopper med vilje.
+
+Tjekket 11. november: en fuld optimering med og uden runde 9-10 fra FPL gav samme konklusion, ingen robust handel, og flyttede spillernes forventning med højst ca. 40.000 kr.
+
 ## Evidens
 
-Facit kommer fra understat og er valideret mod holdets egne point: 90-97 % af spillerne rammes kroneeksakt i de første tre runder.
+Facit kommer fra understat og er valideret mod holdets egne point: 90-97 % af spillerne rammes kroneeksakt i de første tre runder. Mens understat er nede, er facit holdets egne prisændringer.
 
 **Backtest på R4-R5.** Den første, lagdelte models prognoser efter R3 mod realiserede point i R4-R5, og den nuværende model regnet bagefter på de samme 824 spiller-runder (`kalibrering_alle.py --sammenlign`, genberegnet 23/10 på det opdaterede facit):
 
@@ -105,11 +126,24 @@ I den første model var forskellene for spillere med under 5 kampe mest støj (�
 
 Samlet ligger hældningen inden for de 25 %, som kontrollen "forskel −25 %" dækker. De enkelte evidensgrupper svinger meget fra runde til runde, så de læses samlet og med standardfejl.
 
+**Senere runder.** R8 (`exante/r8.json`, 472 spiller-runder) gav β 0,66 (SE 0,08), og de 5 % højest rangerede leverede kun 57 % af det lovede. R9 blev ikke præregistreret. R10 (`exante/r10.json`, 477 spiller-runder) gav β 0,84 (SE 0,09), og toppen leverede 112 %. R10 er målt mod holdets egne prisændringer og regnet på understat-data til og med R8, fordi understat var nede.
+
+**Handler væk fra raske startere** leverer kun omkring halvdelen. I en backtest på R4-R8 leverede handler, der holdt i alle seks kontroller, 50 % af det forudsagte, når den solgte spiller var en rask starter, og 93 %, når han var usikker. Det er ikke gjort til en regel, men en handel væk fra en rask starter skal have god margin.
+
 **Vagtpunktet** er spillere med 5-15 kampes evidens: β 0,31 i backtesten og 0,62 samlet uden for stikprøven. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
 
 **Afvist efter kompleksitetsbudgettet,** fordi de ikke gav en målbar forskel: en prisprior pr. rolle og prisinterval samt spilletidsvinduer på 5, 8 og 10 kampe (Brier 0,207-0,209).
 
 **Taget ind,** fordi det var en fejl og ikke en tuning: startandel som reserve, når RotoWire mangler for en klub (Brier fra 0,209 til 0,178).
+
+**Taget ind 26/10 efter backtest på R4-R8** (`kalibrering_alle.py --backtest`, 2.385 spiller-runder):
+
+| | MSE | β (SE) | β 5-15 | top 5 % leveret |
+|---|---:|---:|---:|---:|
+| Før | 3.148 | 0,83 (0,04) | 0,61 | 84 % |
+| Med straffe som separat led | **3.140** | **0,85** (0,04) | 0,62 | **89 %** |
+
+Straffeleddet var bedre i fire af fem runder og uændret i R4. Startandelen trukket mod status med tre kampe gav Brier 0,1924 → 0,1894 for starter i R6-R8 og 0,2256 → 0,2150 for spillere med under 5 klubkampe. Ingen af rettelserne tilføjer en ny parameter: straffefrekvensen og andelene udledes af data, og de tre kampe er den samme shrinkage som for minutter pr. start.
 
 ## Metoderegler for skøn
 
@@ -123,11 +157,13 @@ Samlet ligger hældningen inden for de 25 %, som kontrollen "forskel −25 %" d�
 
 ## Kendte forenklinger og næste skridt
 
-- **Straffe** ligger i xG. En spiller, der har overtaget straffesparkene, er undervurderet, og en, der har mistet dem, er overvurderet. Næste skridt er npxG + holdets straffefrekvens × spillerens andel.
-- **Spilletid for nye klubspillere** afhænger meget af én RotoWire-status, når de har under 5 kampe for klubben. Kandidaten er en shrinkage af startandelen mod status.
+- **Straffeandelen** er bagudskuende. Den kender ikke et nyt førstevalg, før han har taget straffe, så en handel, der afhænger af en straffeskytte, regnes også med de kendte skytter.
+- **Spilletid for faste startere** er for høj: spillere i RotoWires XI fik pStart 0,85 for resten af sæsonen, men startede 74 % af de følgende runder (R6-R8).
+- **Udelukkelser og gule kort** ligger ikke i modellen. En karantæne regnes ved siden af, som en spiller, der giver 0 i de runder, han mangler.
+- **Kaptajnbonussen** er mindst 0, fordi et fald ikke trækkes fra. Modellen regner kaptajnens forventning uden den bund, så den er lidt for lav.
 - **Klubskifte** halverer i dag vægten af gamle minutter, men sænker ikke niveauet. Data tyder på, at (npxG+xA)/90 falder ~15 % sæsonen efter et skifte.
 - **Bankrenten** regnes lineært. Ved store kontantbeholdninger er renters rente værd at regne med.
-- **Betfair** prissætter kun én runde pålideligt frem. Resten af sæsonen regnes på holdstyrken.
+- **Betfair** prissætter kun én runde pålideligt frem. Resten af sæsonen regnes på holdstyrken. Betfair lukker for danske kunder 18. november 2026, se [Datakilderne i november 2026](#datakilderne-i-november-2026).
 
 Hver ændring tages kun ind, hvis den forbedrer kalibreringen på mindst to runder.
 

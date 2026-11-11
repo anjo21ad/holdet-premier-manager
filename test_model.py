@@ -43,7 +43,7 @@ def spiller(navn, klub, pos, pris, g90, a90, ps=0.9, n=3000.0):
     r = {"name": navn, "club": klub, "pos": pos, "price": pris, "g90": g90, "a90": a90,
          "pS_neste": ps, "pStart": ps, "bt": 0.95, "f60": 0.95,
          "forklaring": {"sum_xg": (g90 * (n + M.K) - M.K * pg) / 90, "sum_xa": (a90 * (n + M.K) - M.K * pa) / 90,
-                        "n": n, "prior": [pg, pa], "vaegt_paa_prior": round(M.K / (n + M.K), 2),
+                        "n": n, "prior": [pg, pa], "vaegt_paa_prior": round(M.K / (n + M.K), 2), "pen90": 0.0, "straffeandel": 0.0,
                         "saesoner": {}, "status": ps, "startandel": ps, "klubkampe": 15, "flag": []}}
     return M.evaluer(r, CTX)
 
@@ -117,6 +117,16 @@ def _():
 
 
 # ---------- beslutningsreglen ----------
+@test("straffeleddet foelger med i K/2 og 2K: kun npxG-raten shrinkes, straffeleddet laegges til bagefter")
+def _():
+    r = spiller("Straffe Skytte", "DDD", "midfield", 4.5, 0.20, 0.15)
+    r["forklaring"]["pen90"] = 0.05
+    for k in (M.K / 2, 2 * M.K):
+        x = HA.variant(r, CTX, k, 0.0)
+        f = r["forklaring"]
+        assert abs(x["g90"] - (M.rate(f["sum_xg"], f["n"], f["prior"][0], k) + 0.05)) < 1e-12, (k, x["g90"])
+
+
 @test("symmetri: gevinst(A->B) = -gevinst(B->A) eksakt")
 def _():
     d1, _ = HA.gevinst(B, CTX, INFO, ["Midt Svag"], ["Midt Stjerne"], HA.KONTROLLER[0])

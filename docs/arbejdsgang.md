@@ -8,7 +8,7 @@ Alle scripts køres fra roden af repoet og bruger kun Pythons standardbibliotek.
 cp eksempler/hold.json eksempler/manager_input.json .     # ret hold.json til dit eget hold
 python hent.py holdet                                     # priser, klubber og kampplan
 python hent.py liga && python hent.py liga 2025           # understat, i år og sidste sæson
-python model.py 8                                         # henter spillerhistorik første gang (~5 min)
+python model.py 11                                        # henter spillerhistorik første gang (~5 min)
 python facit_alle.py                                      # realiserede point for alle spillere hidtil
 python test_model.py                                      # tests uden data
 ```
@@ -21,13 +21,13 @@ Første kørsel af `model.py` henter understats spillerfiler, én pr. spiller me
    ```bash
    python hent.py holdet          # når priserne har flyttet sig, altså efter hver runde
    python hent.py liga
-   python hent.py betfair 8       # kræver BETFAIR_AK, se nedenfor
-   python hent.py rotowire 8      # højst 24 timer før deadline
+   python hent.py betfair 11      # kræver BETFAIR_AK, se nedenfor
+   python hent.py rotowire 11     # højst 24 timer før deadline
    ```
 2. **Kør modellen og portene**
    ```bash
-   python model.py 8
-   python kvalitet.py --runde 8   # deadline læses fra holdets kampplan; stop ved STOP
+   python model.py 11
+   python kvalitet.py --runde 11  # deadline læses fra holdets kampplan; stop ved STOP
    ```
 3. **Præregistrér**, før du ser på handler: `python praeregistrer.py 8`. Filen kan ikke overskrives. Henter du RotoWire igen tæt på deadline, så præregistrér med et mærke, fx `8-lor`.
 4. **Vurdér handler**
@@ -68,10 +68,13 @@ Opdatér derefter `hold.json` med runde, hold, gebyrfri spillere og kapital fra 
 | **Betfair** | Holdstyrke fra Match Odds og "begge hold scorer" |
 | **RotoWire** | Forventede opstillinger og skader til næste runde |
 
+> [!WARNING]
+> I november 2026 er understat nede, og Betfair lukker for danske kunder 18/11. Erstatningerne og hvordan de er testet står i [metode.md](metode.md#datakilderne-i-november-2026).
+
 Fælderne er tavse. De giver ikke en fejl, bare forkerte tal. Derfor er de gjort til porte i `hent.py` og `kvalitet.py`:
 
 - **understat** kræver headeren `X-Requested-With: XMLHttpRequest`. Uden den svarer serveren 404-HTML på 461 bytes, og en løkke skriver tomme filer uden at klage.
-- **holdet.dk** svarer 200 med en HTML-skal på forkerte stier. En forældet holdet-fil giver forkerte klubber og priser. `kvalitet.py` stopper, hvis priserne ikke stemmer med startpris + facit-point.
+- **holdet.dk** flyttede sit API fra `/api/season/` til `/api/fantasy/` i november 2026. Den gamle sti giver 404, og forkerte stier giver 200 med en HTML-skal. En forældet holdet-fil giver forkerte klubber og priser. `kvalitet.py` stopper, hvis priserne ikke stemmer med startpris + facit-point.
 - **Betfair** skal hentes på engelsk (`locale=en`), og markedstypen skal stå i søgningens hovedfilter. Ellers kommer der Match Odds i filen for "begge hold scorer", og runden falder stille ud af holdstyrken. Betfair prissætter reelt kun én runde pålideligt frem.
 - **RotoWire** skifter fra forudsagt til bekræftet opstilling omkring en time før kampstart. Hent højst 24 timer før deadline.
 

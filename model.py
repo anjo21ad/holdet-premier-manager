@@ -9,10 +9,12 @@ Fire kilder, hver med een rolle:
 Kampprogram og runder fra holdets egen kampplan (holdet-pl-schedule-*.json).
 
 Tre regler:
-  1. RATE (Marcel): g90 = (sum v*xG*90 + K*prior_rolle) / (sum v*min + K) over STARTER i tre saesoner.
+  1. RATE (Marcel): g90 = (sum v*npxG*90 + K*prior_rolle) / (sum v*min + K) over STARTER i tre saesoner.
      v = 1 / 0,8 / 0,6 efter saeson (5/4/3), x 0,5 for minutter i en anden klub. Samme for a90 med xA.
+     Straffe er et separat led (rettelse 1, 26/10): + ligaens straffe-xG pr. holdkamp x spillerens andel af
+     klubbens straffe-xG (2025 + i aar).
   2. SPILLETID: naeste runde = RotoWire-status; resten = 1/2 status + 1/2 startandel i klubbens
-     seneste 15 kampe med spilleren i klubben (under 5 kampe: kun status).
+     seneste 15 kampe med spilleren i klubben, shrunket mod status med 3 kampe (rettelse 2, 26/10).
   3. HOLDSTYRKE: preseason-tier som prior (vaegt 4 runder), opdateret med Betfair-lambda fra hver gemt runde.
 Een pointformel (ev_kamp = spillets regler). Dit eget skoen kun via manager_input.json (hoejst ~5 poster).
 Kompleksitetsbudget: ingen ny parameter, kilde eller lag uden maalt forbedring i backtest paa >= 2 runder.
@@ -32,7 +34,7 @@ K = 1000.0                                   # prior-minutter (~11 kampe; FPL Re
 V_SAESON = {"2026": 1.0, "2025": 0.8, "2024": 0.6}  # Marcel 5/4/3
 V_ANDEN_KLUB = 0.5                           # xG-persistens 0,6 -> 0,4 ved klubskifte (Evidently)
 PS = {"XI": 0.92, "XI_QUES": 0.70, "QUES": 0.25, "OUT": 0.02, "ANDET": 0.14}
-N_ANDEL, N_MIN_ANDEL = 15, 5                 # startandel over klubbens seneste 15 kampe; under 5: kun status
+N_ANDEL = 15                                 # startandel over klubbens seneste 15 kampe (shrinkes mod status med SHRINK_START)
 MARKED_PRIOR = 4                             # preseason-tier vejer som 4 markedsrunder
 SHRINK_START = 3                             # minutter pr. start og 60-min-andel shrinkes med 3 starter mod rollens norm
 HA, LAMSKALA, REDN_PR_XGA = 1.10, 0.5, 1.66  # hjemmebane; holdets angreb -> spillerens; redninger pr. xG imod (R1-R3)
@@ -265,15 +267,33 @@ def byg(runde, rundeinfo=True):
     rk = collections.defaultdict(list)          # us_id -> [(dato, saeson, klub, pos, min, xg, xa)]
     skud = collections.defaultdict(list)        # us_id -> [(xg, situation)] i aar
     klubkampe = collections.defaultdict(list)   # klub -> [(dato, kamp_id)] 2025 + 2026
+    # straffe (rettelse 1): rosternes xG er uden straffe; straffe-xG pr. (spiller, kamp), klub og (spiller, klub)
+    PEN_KAMP = collections.defaultdict(float); PEN_KLUB = collections.defaultdict(float); PEN_SP = collections.defaultdict(float)
+    holdkampe = 0
     for r, x, md in kampe:
+        for side in ("h", "a"):
+            kl = UK[x[side]["title"]]
+            holdkampe += 1
+            for sk_ in md["shots"][side]:
+                if sk_["situation"] == "Penalty":
+                    PEN_KAMP[(sk_["player_id"], x["id"])] += float(sk_["xG"])
+                    PEN_KLUB[kl] += float(sk_["xG"]); PEN_SP[(sk_["player_id"], kl)] += float(sk_["xG"])
         for side in ("h", "a"):
             kl = UK[x[side]["title"]]
             klubkampe[kl].append((x["datetime"], x["id"]))
             for p in md["rosters"][side].values():
                 if int(p["time"]) > 0:
-                    rk[p["player_id"]].append((x["datetime"], "2026", kl, p["position"], int(p["time"]), float(p["xG"]), float(p["xA"]), x["id"]))
+                    rk[p["player_id"]].append((x["datetime"], "2026", kl, p["position"], int(p["time"]),
+                                               float(p["xG"]) - PEN_KAMP.get((p["player_id"], x["id"]), 0.0), float(p["xA"]), x["id"]))
         for s in md["shots"]["h"] + md["shots"]["a"]:
             skud[s["player_id"]].append((float(s["xG"]), s["situation"]))
+    # 2025: klubbernes straffe-xG fra ligafilen (xG - npxG), spillere med flere klubber taelles under den sidste
+    PEN_KLUB25 = collections.defaultdict(float)
+    for p in liga25["players"]:
+        kl = UK.get(p["team_title"].split(",")[-1].strip())
+        if kl:
+            PEN_KLUB25[kl] += float(p["xG"]) - float(p["npxG"])
+    PEN_PR_HOLDKAMP = (sum(PEN_KLUB25.values()) + sum(PEN_KLUB.values())) / (760 + holdkampe)
     for x in liga25["dates"]:
         if x["isResult"]:
             for side in ("h", "a"):
@@ -300,6 +320,7 @@ def byg(runde, rundeinfo=True):
 
     # 3. raa rater pr. spiller (starter, vaegtet) -> rolle -> rollepriorer fra data
     import hent as U
+    PEN_SP25 = collections.defaultdict(float)
     def raekker(pid, kl):
         ud = list(rk.get(pid, []))
         fn = os.path.join(SP, "us-p-%s.json" % pid)
@@ -311,10 +332,17 @@ def byg(runde, rundeinfo=True):
         if os.path.exists(fn):
             d = json.load(io.open(fn, encoding="utf-8"))
             hold = U.hold_pr_saeson(d)
+            pen_m = collections.defaultdict(float)
+            for sk_ in d["shots"]:
+                if sk_["situation"] == "Penalty" and sk_["season"] in ("2025", "2024"):
+                    pen_m[str(sk_["match_id"])] += float(sk_["xG"])
+                    if sk_["season"] == "2025":
+                        PEN_SP25[(pid, UK.get(sk_["h_team"] if sk_["h_a"] == "h" else sk_["a_team"]))] += float(sk_["xG"])
             for m in d["matches"]:
                 if m["season"] in ("2025", "2024"):
                     egen = U.egen_og_modstander(m, hold)[0]
-                    ud.append((m["date"], m["season"], UK.get(egen, egen), m["position"], int(m["time"]), float(m["xG"]), float(m["xA"]), m["id"]))
+                    ud.append((m["date"], m["season"], UK.get(egen, egen), m["position"], int(m["time"]),
+                               float(m["xG"]) - pen_m.get(str(m["id"]), 0.0), float(m["xA"]), m["id"]))
         return ud
     spillere = {}
     for it in aktive:
@@ -385,21 +413,28 @@ def byg(runde, rundeinfo=True):
             man = {}
         rolle = man.get("rolle", s["rolle"])
         pg, pa = prior.get(rolle, (0.0, 0.0))
-        g90, a90 = rate(s["xg"], s["n"], pg), rate(s["xa"], s["n"], pa)
+        # rettelse 1 (26/10): npxG-rate + ligaens straffe-xG pr. holdkamp x spillerens andel af klubbens straffe
+        # (2025 + i aar, kun nuvaerende klub). Backtest R4-R8: MSE 3.148 -> 3.140, beta 0,83 -> 0,85, top 5 % 84 -> 89 %.
+        klub_pen = PEN_KLUB25.get(kl, 0.0) + PEN_KLUB.get(kl, 0.0)
+        andel_pen = min(1.0, (PEN_SP25.get((s["pid"], kl), 0.0) + PEN_SP.get((s["pid"], kl), 0.0)) / klub_pen) if klub_pen > 0 else 0.0
+        pen90 = PEN_PR_HOLDKAMP * andel_pen
+        g90, a90 = rate(s["xg"], s["n"], pg) + pen90, rate(s["xa"], s["n"], pa)
         # startandel: klubbens seneste kampe siden spillerens foerste optraeden for klubben
         egne = {x[7]: x for x in s["rows"] if x[2] == kl}
         foerste = min((x[0] for x in egne.values()), default=None)
         km = sorted(k for k in klubkampe[kl] if foerste and k[0] >= foerste)[-N_ANDEL:]
-        andel = sum(1 for _, mid in km if mid in egne and egne[mid][3] != "Sub") / len(km) if km else None
+        n_st = sum(1 for _, mid in km if mid in egne and egne[mid][3] != "Sub")
+        andel = n_st / len(km) if km else None
         if kl in rw:
             l = rw[kl]
             ixi, iq, io_ = i_liste(nm, l.get("xi", [])), i_liste(nm, l.get("ques", [])), i_liste(nm, l.get("out", []))
             status = PS["OUT"] if io_ else PS["XI_QUES"] if ixi and iq else PS["XI"] if ixi else PS["QUES"] if iq else PS["ANDET"]
         else:   # ingen RotoWire for klubben (kun i backtest; live kraever kvalitet.py alle 20): startandel shrunket mod 0,14
-            n_st = sum(1 for _, mid in km if mid in egne and egne[mid][3] != "Sub")
             status = (n_st + 2 * PS["ANDET"]) / (len(km) + 2)
         ps_n = status
-        pstart = 0.5 * status + 0.5 * andel if (andel is not None and len(km) >= N_MIN_ANDEL) else status
+        # rettelse 2 (26/10): startandelen shrinkes mod status med 3 kampe i stedet for et hop ved 5 klubkampe.
+        # Brier for starter efter naeste runde: R4 0,1989 -> 0,1964, R5 0,1855 -> 0,1804, R6 0,1868 -> 0,1862.
+        pstart = 0.5 * status + 0.5 * (n_st + SHRINK_START * status) / (len(km) + SHRINK_START)
         if "pStart" in man:
             pstart = man["pStart"]
         egne_st = [x for x in s["st"] if x[2] == kl]
@@ -429,7 +464,7 @@ def byg(runde, rundeinfo=True):
             flag.append("MANAGER: %s" % man.get("grund", ""))
         r["forklaring"] = {"vaegtede_min": round(s["n"]), "vaegt_paa_prior": round(K / (s["n"] + K), 2),
                            "sum_xg": s["xg"], "sum_xa": s["xa"], "n": s["n"],
-                           "prior": [pg, pa], "rolle_maalt": s["rolle"],
+                           "prior": [pg, pa], "rolle_maalt": s["rolle"], "pen90": pen90, "straffeandel": round(andel_pen, 2),
                            "saesoner": {k: {"startmin": v[0], "xg90": round(v[1] / v[0] * 90, 2) if v[0] else None,
                                             "xa90": round(v[2] / v[0] * 90, 2) if v[0] else None} for k, v in sorted(saes.items())},
                            "status": round(status, 2), "startandel": None if andel is None else round(andel, 2),

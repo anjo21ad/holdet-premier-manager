@@ -54,7 +54,7 @@ def variant(r, ctx, k, dps):
     x = copy.copy(r)
     if k is not None:
         f = x["forklaring"]
-        x["g90"], x["a90"] = M.rate(f["sum_xg"], f["n"], f["prior"][0], k), M.rate(f["sum_xa"], f["n"], f["prior"][1], k)
+        x["g90"], x["a90"] = M.rate(f["sum_xg"], f["n"], f["prior"][0], k) + f["pen90"], M.rate(f["sum_xa"], f["n"], f["prior"][1], k)
     if dps:
         x["pS_neste"] = min(1.0, max(0.0, x["pS_neste"] + dps))
         x["pStart"] = min(1.0, max(0.0, x["pStart"] + dps))

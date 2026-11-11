@@ -13,7 +13,7 @@
 
 Denne model er lavet til Premier Manager på [holdet.dk](https://www.holdet.dk) og er brugt på mit eget hold i hver runde siden sæsonstart. Den giver alle spillere ét tal: hvor meget de ventes at stige i værdi resten af sæsonen. Og den har en fast regel for, hvornår en handel betaler sig.
 
-**Mit hold, Skjoldes Juveler, ligger nr. 38 af over 28.000 efter otte runder.** Otte runder er for lidt til at skille dygtighed fra held, så det er et godt tegn og ikke et bevis. Hvorfor står under [Den store fælde](#den-store-fælde-held-ligner-talent).
+**Mit hold, Skjoldes Juveler, ligger nr. 19 af over 28.000 efter ti runder.** Ti runder er for lidt til at skille dygtighed fra held, så det er et godt tegn og ikke et bevis. Hvorfor står under [Den store fælde](#den-store-fælde-held-ligner-talent).
 
 ## Hvorfor har jeg lavet det her?
 
@@ -44,6 +44,22 @@ Modellens mål er derfor holdets samlede værdi, netto af gebyr og rente. Det ha
 
 Før hver deadline tjekker `kvalitet.py` data. Er en fil for gammel, eller har en kilde svaret forkert, stopper den hellere end at regne videre.
 
+> [!WARNING]
+> **To af kilderne svigter i november 2026.** understat har været nede siden 2. november og viser kun en vedligeholdelsesside, og Betfair lukker for danske kunder 18. november. Indtil erstatningerne er bygget ind, regner modellen på understat-data til og med runde 8, og `kvalitet.py` stopper med vilje.
+
+### Erstatningerne
+
+Alle fire er testet fra en dansk maskine og har samme univers som holdet.dk, med Coventry, Hull og Ipswich i ligaen:
+
+| Kilde | Erstatter | Testet mod den gamle kilde |
+|---|---|---|
+| **Pinnacle** | Betfair: odds på resultat, totaler og holdtotaler | Sandsynlighederne for runde 11 lå i gennemsnit 0,5 procentpoint fra Betfair, højst 1,3, over ni kampe |
+| **FotMob** | understat: skudkort med xG pr. skud, situation og opstillinger | Skudniveauet gør det muligt at skille straffe fra og måle koncentration som før |
+| **FPL** | understat: xG, xA, minutter og starter pr. kamp | Korrelation 0,977 med understats xG i runde 1-8 over 183 spillere. FPL bruger Opta, der ligger lavere, så tallene skal skaleres: xG × 1,107 og xA × 1,27 |
+| **holdet.dk** | understat som facit | Point er prisændring, så spillets egne priser er facit |
+
+En ny kilde tages først ind, når backtesten på runde 4-8 ikke bliver dårligere med den. Et tjek 11. november viste, at en fuld optimering gav samme svar med og uden runde 9-10 fra FPL. Detaljerne står i [docs/metode.md](docs/metode.md#datakilderne-i-november-2026).
+
 ## Den store fælde: held ligner talent
 
 <p align="center"><img src="docs/img/held-ligner-talent.svg" alt="Held ligner talent: 24 lige gode spillere spreder sig tilfældigt efter tre runder, og den, der ser bedst ud, har haft mest held" width="100%"></p>
@@ -60,7 +76,7 @@ Hver spillers tal bygger på tre regler: hvor meget han skaber, når han er på 
 
 Marcel er en prognosemodel fra baseball. Tom Tango lavede den for at vise, hvor langt man kommer med det mest basale: de seneste tre sæsoner vægtet 5/4/3 og et træk mod gennemsnittet, indtil der er data nok. Navnet kommer fra "Marcel the Monkey", fordi den skulle være så enkel, at en abe kunne regne den ud. Tabellen viser Marcels fire byggesten, og hvordan de er oversat til fodbold.
 
-Premier Manager har samme problem som baseball: få kampe, meget støj og en stærk fristelse til at tro på den seneste form. Oversat til fodbold måler modellen xG og xA i stedet for mål, kun fra kampe, spilleren starter, og trækker mod det typiske for spillerens rolle. Hvert tal kan følges tilbage til de minutter og sæsoner, det bygger på.
+Premier Manager har samme problem som baseball: få kampe, meget støj og en stærk fristelse til at tro på den seneste form. Oversat til fodbold måler modellen xG og xA i stedet for mål, kun fra kampe, spilleren starter, og trækker mod det typiske for spillerens rolle. Straffespark regnes for sig: raten bygger på xG uden straffe, og bagefter lægges ligaens straffe-xG pr. kamp gange spillerens andel af klubbens straffe til. Hvert tal kan følges tilbage til de minutter og sæsoner, det bygger på.
 
 <p align="center"><img src="docs/img/tro-paa-det-sete.svg" alt="Saka har 0,69 xG i år mod 0,35 før, og modellen siger 0,44. Palmer har 0,29 i år mod 0,45 før, og modellen siger 0,38" width="100%"></p>
 
@@ -68,7 +84,7 @@ Jo flere kampe, jo mere vejer spillerens egne tal. Efter cirka elleve kampe veje
 
 ### 2. Spilletid: opstillingerne
 
-Næste runde regnes på RotoWires forventede opstilling. Resten af sæsonen er halvt RotoWire og halvt den andel af klubbens seneste 15 kampe, spilleren har startet.
+Næste runde regnes på RotoWires forventede opstilling. Resten af sæsonen er halvt RotoWire og halvt den andel af klubbens seneste 15 kampe, spilleren har startet. Andelen trækkes mod RotoWire med tre kampes vægt, så en spiller med få kampe for klubben ikke svinger fra den ene yderlighed til den anden.
 
 ### 3. Holdstyrke: markedet
 
@@ -80,13 +96,13 @@ Hvert hold har et udgangspunkt fra før sæsonen, som hver runde opdateres med d
 
 | | Regel | Hvad den gør |
 |---|---|---|
-| 1 | **Rate (Marcel)** | xG og xA pr. 90 minutter fra **starter** i tre sæsoner, vægtet 1,0 / 0,8 / 0,6. Minutter i en anden klub tæller halvt. Raten trækkes mod medianen for spillerens rolle med 1.000 minutters vægt |
-| 2 | **Spilletid** | Næste runde fra RotoWire. Resten af sæsonen er ½ status + ½ startandel i klubbens seneste 15 kampe |
+| 1 | **Rate (Marcel)** | xG uden straffe og xA pr. 90 minutter fra **starter** i tre sæsoner, vægtet 1,0 / 0,8 / 0,6. Minutter i en anden klub tæller halvt. Raten trækkes mod medianen for spillerens rolle med 1.000 minutters vægt. Straffe lægges til som et separat led: ligaens straffe-xG pr. holdkamp × spillerens andel af klubbens straffe |
+| 2 | **Spilletid** | Næste runde fra RotoWire. Resten af sæsonen er ½ status + ½ startandel i klubbens seneste 15 kampe, trukket mod status med tre kampe |
 | 3 | **Holdstyrke** | Udgangspunkt før sæsonen, opdateret med de målforventninger, der passer til Betfairs priser |
 | | **Pointformel** | Spillets regler i `ev_kamp()`. `evaluer()` er det eneste sted, forventningen beregnes |
 
 ```
-g90 = (Σ v · xG · 90 + K · typisk_for_rollen) / (Σ v · minutter + K)        K = 1.000 minutter
+g90 = (Σ v · npxG · 90 + K · typisk_for_rollen) / (Σ v · minutter + K) + straffeled        K = 1.000 minutter
 ```
 
 Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
@@ -159,9 +175,9 @@ Sammen med basis, altså modellens bedste bud, giver det seks kontroller. Ét ne
 
 ### Rundens handel
 
-<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 8, nr. 38 af over 28.000 hold efter otte runder: Raya; Calafiori, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Thiago, Haaland (kaptajn), Kostoulas. Rundens handel: Koumas ud, Schade ind, +526 tusind kroner over resten af sæsonen og ja i alle seks kontroller" width="100%"></p>
+<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 11, nr. 19 af over 28.000 hold efter ti runder: Raya; Gabriel, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Delap, Haaland (kaptajn), Kostoulas. Rundens handel: Thiago ud, udelukket i tre kampe, Delap ind, +185 tusind kroner over resten af sæsonen og ja i alle seks kontroller" width="100%"></p>
 
-Før runde 8 skiftede jeg Koumas ud med Schade. Koumas kom på bænken, da Isak var tilbage hos Liverpool, og Schade er klar igen efter en skulderskade. Modellen regnede handlen til 526.000 kr. over resten af sæsonen, og den holdt i alle seks kontroller. Kortet bliver opdateret efter hver runde.
+Før runde 11 skiftede jeg Thiago ud med Delap. Thiago fik direkte rødt kort i runde 10 og er udelukket i de næste tre kampe, så han giver 0 point i runde 11-13. Modellen regnede både et permanent salg og en midlertidig afløser med genkøb bagefter. Den prøvede afløsere i alle tre positioner, fordi en formation med to angribere også var mulig. Delap gav 185.000 kr. over resten af sæsonen og 92.000 kr. i den værste af de seks kontroller. Han koster 2,5 mio. kr. mindre end Thiago, så pengene står i banken og holder et genkøb åbent, når Thiago er tilbage. Kortet bliver opdateret efter hver runde.
 
 ## Virker det?
 
@@ -173,8 +189,9 @@ Prognoserne låses med `praeregistrer.py` før hver deadline og kan ikke rettes 
 - **Toppen leverer det meste.** De 5 % højest rangerede spillere leverede 86 % af det lovede. Det er optimizerens forbandelse i lille skala, og det er grunden til, at kontrollerne findes.
 - **Spillere med 5-15 kampe er det svage punkt.** Hældningen er 0,62, og det var også den svageste gruppe i backtesten. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
 - **Én runde er for lidt.** Spillere med under 5 kampe lå på 1,28 i R6 og 0,36 i R7. Samlet er det 0,85, men stregerne viser, hvor usikkert det stadig er.
+- **Siden grafen.** R8 gav 0,66, og toppen leverede kun 57 %. R9 blev ikke låst. R10 gav 0,84, og de 5 % højest rangerede leverede 112 %, selvom modellen kun havde understat-data til og med R8. R10 er målt mod holdet.dk's egne prisændringer.
 
-I backtesten på R4-R5 var den samlede fejl 7 % lavere end i den første model (MSE 3.200 mod 3.436). Hele faldet kom fra Betfair og RotoWire for runden. Marcel gjorde ikke fejlen mindre, men rettede, at prognoserne for spillere med få kampe var mest støj. Modellen er rettet én gang mellem R6 og R7.
+I backtesten på R4-R5 var den samlede fejl 7 % lavere end i den første model (MSE 3.200 mod 3.436). Hele faldet kom fra Betfair og RotoWire for runden. Marcel gjorde ikke fejlen mindre, men rettede, at prognoserne for spillere med få kampe var mest støj. Modellen er rettet to gange: én gang mellem R6 og R7, og igen før R9, hvor straffe blev et separat led, og startandelen blev trukket mod status. I backtesten på R4-R8 faldt fejlen fra 3.148 til 3.140, og hældningen steg fra 0,83 til 0,85.
 
 Pointene i målingen er regnet ud fra kampdata og rammer holdet.dk's egne tal på kronen for 90-97 % af spillerne. Tallene opdateres, efterhånden som flere runder bliver låst og spillet.
 
@@ -191,14 +208,16 @@ cp eksempler/hold.json eksempler/manager_input.json .    # ret hold.json til dit
 
 python hent.py holdet                       # priser, klubber og kampprogram
 python hent.py liga && python hent.py liga 2025
-python hent.py rotowire 8                   # højst 24 timer før deadline
-python hent.py betfair 8                    # kræver miljøvariablen BETFAIR_AK
+python hent.py rotowire 11                  # højst 24 timer før deadline
+python hent.py betfair 11                   # kræver miljøvariablen BETFAIR_AK
 
-python model.py 8                           # første gang hentes spillerhistorik (~5 min)
+python model.py 11                          # første gang hentes spillerhistorik (~5 min)
 python facit_alle.py                        # faktiske point hidtil
-python kvalitet.py --runde 8                # STOP betyder: ingen beslutning på disse data
+python kvalitet.py --runde 11               # STOP betyder: ingen beslutning på disse data
 python handel.py --skan "Phil Foden"        # de bedste afløsere, vurderet i alle seks kontroller
 ```
+
+I november 2026 fejler `hent.py liga`, fordi understat er nede, og Betfair kan ikke hentes fra Danmark efter 18. november. Se [Erstatningerne](#erstatningerne).
 
 Testene kører uden data: `python test_model.py`. Hvad du gør før deadline og efter hver runde, står i [docs/arbejdsgang.md](docs/arbejdsgang.md).
 
@@ -214,7 +233,7 @@ Testene kører uden data: `python test_model.py`. Hvad du gør før deadline og 
 | `kvalitet.py` | Tjekker data før en beslutning og stopper ved fejl |
 | `praeregistrer.py` | Låser alle prognoser før deadline. Nægter at overskrive |
 | `facit_alle.py` | Regner de faktiske point ud for alle spillere |
-| `kalibrering_alle.py` | Måler prognoserne mod facit |
+| `kalibrering_alle.py` | Måler prognoserne mod facit. `--backtest` kører modellen, som den var før hver runde |
 | `test_model.py` | Tests på opdigtede spillere og kampe |
 | `CLAUDE.md` | Arbejdsreglerne, som Claude Code følger |
 | `docs/` | [Metode](docs/metode.md), [pointsystem](docs/pointsystem.md) og [arbejdsgang](docs/arbejdsgang.md) |
@@ -225,10 +244,11 @@ Testene kører uden data: `python test_model.py`. Hvad du gør før deadline og 
 ## Kendte forenklinger
 
 - Sat op til Premier Manager i efteråret 2026. Til et nyt spil skal du rette spil-id, sæsoner og holdenes udgangspunkt ([se hvordan](docs/arbejdsgang.md#en-ny-sæson)).
-- Straffespark ligger i xG. En spiller, der lige har overtaget straffesparkene, er undervurderet.
+- Straffeandelen bygger på sidste og denne sæson. En spiller, der lige har overtaget straffesparkene, er undervurderet, indtil han har taget nogle.
+- Udelukkelser og gule kort ligger ikke i modellen og regnes ved siden af.
 - Nye spillere i en klub får deres spilletid fra få kampe.
 - Betfair prissætter næste runde. De senere runder regnes på holdstyrken.
-- Kaptajnens dobbelte vækst regnes med i `handel.py`, men ikke i spillernes tal i `board.json`.
+- Kaptajnens dobbelte vækst regnes med i `handel.py`, men ikke i spillernes tal i `board.json`. Et fald hos kaptajnen trækkes ikke fra, og den bund ligger ikke i modellen.
 
 ## Data og vilkår
 

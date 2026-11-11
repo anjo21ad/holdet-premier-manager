@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """HENT: al dataindsamling til model.py - holdet, understat, Betfair og RotoWire.
 
-  python hent.py holdet             priser/klubber -> holdet-DDMM.json; kampplan -> holdet-pl-schedule.json
+  python hent.py holdet             priser/klubber -> holdet-DDMM.json (kampplanen er statisk: holdet-pl-schedule.json)
   python hent.py liga [saeson]      understat-ligadata (default 2026; model.py bruger ogsaa 2025)
   python hent.py betfair <runde>    Match Odds + BTTS for PL -> bf-r<N>-MATCH_ODDS.json / -BOTH_TEAMS_TO_SCORE.json
   python hent.py rotowire <runde>   forudsagte opstillinger + skader -> rw-r<N>.json
@@ -9,7 +9,8 @@
 Alt gemmes i input/. Repoet indeholder ingen data, og du er selv ansvarlig for at bruge kilderne efter
 deres vilkaar. Del ikke de hentede filer videre.
 
-holdet-API'et er aabent for spillerlisten og kampplanen. Forkerte stier giver 200 med en HTML-skal,
+holdet-API'et er aabent for spillerlisten og kampplanen under /api/fantasy/ (flyttet fra /api/season/ i november 2026;
+den gamle sti giver 404). Forkerte stier giver 200 eller 404 med en HTML-skal,
 saa svaret skal vaere JSON med de forventede noegler (stopper ellers). Bank og rang ligger bag login.
 
 Faelderne er bygget ind som porte: understat uden 'X-Requested-With: XMLHttpRequest' svarer 404-HTML paa
@@ -102,12 +103,12 @@ def _http(url, data=None):
 
 
 def holdet():
-    """Spillere (pris, startpris, klub, position) og kampplan fra holdet.dk. Kampplanen overskrives som
-    holdet-pl-schedule.json, som model.py vaelger (sorterer efter de daterede filer)."""
+    """Spillere (pris, startpris, klub, position) og kampplan (deadlines og resultater) fra holdet.dk's fantasy-API.
+    Kampplanen overskrives som holdet-pl-schedule.json, som model.py vaelger (sorterer efter de daterede filer)."""
     ud = []
     for sti, fn, noegler in (("games/%d/players?page.size=1000" % GAME_ID, "holdet-%s.json" % time.strftime("%d%m"), ("items", "_embedded")),
                              ("schedules/%d" % GAME_ID, "holdet-pl-schedule.json", ("rounds", "events"))):
-        raw = _http("https://www.holdet.dk/api/season/" + sti)
+        raw = _http("https://www.holdet.dk/api/fantasy/" + sti)
         try:
             d = json.loads(raw.decode("utf-8"))
         except ValueError:
