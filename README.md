@@ -113,7 +113,7 @@ Godt halvdelen af spillerne ventes at give under 100.000 kr., fordi de sjældent
 
 ## Før en handel anbefales
 
-<p align="center"><img src="docs/img/handlens-vaerdi.svg" alt="Thiago ud og Delap ind: +73,3 i forventet vækst, −29,9 i gebyr og +245,3 i rente, fordi Delap koster 2,45 mio. mindre. Det giver +288,8 tusind kroner" width="100%"></p>
+<p align="center"><img src="docs/img/handlens-vaerdi.svg" alt="Thiago ud og Delap ind: +73,3 i forventet vækst, −29,8 i gebyr og +245,3 i rente, fordi Delap koster 2,45 mio. mindre. Det giver +288,8 tusind kroner" width="100%"></p>
 
 En handel regnes over resten af sæsonen og ikke kun næste runde. Gebyret trækkes fra, og renten regnes med: penge i spillere giver ikke de 1 % pr. runde, som de giver i banken. Her koster Delap 2,45 mio. kr. mindre end Thiago, så renten trækker op og ikke ned.
 
