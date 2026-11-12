@@ -31,8 +31,8 @@ Historikken hentes én gang og ligger derefter i `input/` som en kompakt fil pr.
 3. **Præregistrér**, før du ser på handler: `python praeregistrer.py 11`. Filen kan ikke overskrives. Henter du RotoWire igen tæt på deadline, så præregistrér med et mærke, fx `11-lor`.
 4. **Vurdér handler**
    ```bash
-   python handel.py --skan "Phil Foden"                         # de 15 bedste afløsere i alle seks kontroller
-   python handel.py "Phil Foden > Bryan Mbeumo"                 # én handel
+   python handel.py --skan "Ezri Konsa"                         # de 15 bedste afløsere i alle seks kontroller
+   python handel.py "Igor Thiago > Liam Delap"                  # én handel
    python handel.py "A > B" "C > D"                             # en pakke
    python handel.py "A > B" --log "største risiko: ..."         # skriv til beslutningslog.csv
    ```

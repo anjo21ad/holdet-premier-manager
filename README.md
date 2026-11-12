@@ -39,7 +39,7 @@ Modellens mål er derfor holdets samlede værdi, netto af gebyr og rente. Det ha
 |---|---|---|
 | **holdet.dk** | Priser, klubber, positioner og kampprogram | Point er pris, så spillets egne tal er facit. holdet.dk er eneste autoritet, også når spillets univers afviger fra virkeligheden |
 | **FotMob** | Starter, minutter, xG og xA fra hver kamp i tre sæsoner, i Premier League og de fire andre store ligaer | xG måler chancernes kvalitet og svinger mindre end mål. Det er grundlaget for spillerens egen rate |
-| **Pinnacle** | Odds på næste runde: resultat og over/under 2,5 mål | Markedet er det bedste offentlige bud på hver kamp. Herfra kommer sejrschance, mål for og imod og clean sheet. For Calafiori står det for 61 % af værdien |
+| **Pinnacle** | Odds på næste runde: resultat og over/under 2,5 mål | Markedet er det bedste offentlige bud på hver kamp. Herfra kommer sejrschance, mål for og imod og clean sheet. For Gabriel står det for 66 % af værdien i runde 11 |
 | **RotoWire** | Forventede startopstillinger til næste runde | Alt ganges med spilletid. En spiller på bænken giver −5 |
 
 Før hver deadline tjekker `kvalitet.py` data. Er en fil for gammel, eller har en kilde svaret forkert, stopper den hellere end at regne videre.
@@ -58,15 +58,15 @@ Hver spillers tal bygger på tre regler: hvor meget han skaber, når han er på 
 
 ### 1. Hvad spilleren skaber: Marcel
 
-<p align="center"><img src="docs/img/marcel.svg" alt="Marcel: Tom Tangos baseballprognose bruger de seneste tre sæsoner vægtet 5/4/3 og trækker mod gennemsnittet. Her bruges xG og xA fra starter, det typiske for rollen med 1.000 minutters vægt, og minutter i en anden klub tæller halvt. Sakas bud på 0,44 bygger 14 procent på i år, 39 procent på sidste sæson, 23 procent på sæsonen før og 24 procent på det typiske for rollen" width="100%"></p>
+<p align="center"><img src="docs/img/marcel.svg" alt="Marcel: Tom Tangos baseballprognose bruger de seneste tre sæsoner vægtet 5/4/3 og trækker mod gennemsnittet. Her bruges xG og xA fra starter, det typiske for rollen med 1.000 minutters vægt, og minutter i en anden klub tæller halvt. Delaps bud på 0,36 bygger 24 procent på i år i Forest, 12 procent på sidste sæson i Chelsea, 28 procent på sæsonen før i Ipswich og 36 procent på det typiske for en angriber" width="100%"></p>
 
 Marcel er en prognosemodel fra baseball. Tom Tango lavede den for at vise, hvor langt man kommer med det mest basale: de seneste tre sæsoner vægtet 5/4/3 og et træk mod gennemsnittet, indtil der er data nok. Navnet kommer fra "Marcel the Monkey", fordi den skulle være så enkel, at en abe kunne regne den ud. Tabellen viser Marcels fire byggesten, og hvordan de er oversat til fodbold.
 
 Premier Manager har samme problem som baseball: få kampe, meget støj og en stærk fristelse til at tro på den seneste form. Oversat til fodbold måler modellen xG og xA i stedet for mål, kun fra kampe, spilleren starter, og trækker mod det typiske for spillerens rolle. Straffespark regnes for sig: raten bygger på xG uden straffe, og bagefter lægges ligaens straffe-xG pr. kamp gange spillerens andel af klubbens straffe til. Hvert tal kan følges tilbage til de minutter og sæsoner, det bygger på.
 
-<p align="center"><img src="docs/img/tro-paa-det-sete.svg" alt="Saka har 0,69 xG i år mod 0,35 før, og modellen siger 0,44. Palmer har 0,29 i år mod 0,45 før, og modellen siger 0,38" width="100%"></p>
+<p align="center"><img src="docs/img/tro-paa-det-sete.svg" alt="Tavernier har 0,45 xG uden straffe i år mod 0,25 før, og modellen siger 0,28. Palmer har 0,18 i år mod 0,32 før, og modellen siger 0,27" width="100%"></p>
 
-Jo flere kampe, jo mere vejer spillerens egne tal. Efter cirka elleve kampe vejer de mere end det typiske for rollen. Saka og Palmer viser, hvordan det virker: en god eller dårlig start flytter vurderingen, men overtager den ikke.
+Jo flere kampe, jo mere vejer spillerens egne tal. Efter cirka elleve kampe vejer de mere end det typiske for rollen. Tavernier og Palmer viser, hvordan det virker: en god eller dårlig start flytter vurderingen, men overtager den ikke.
 
 ### 2. Spilletid: opstillingerne
 
@@ -95,56 +95,60 @@ Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
 
 </details>
 
-## Et regnestykke: Calafiori mod Everton
+## Et regnestykke: Delap mod Bournemouth
 
-<p align="center"><img src="docs/img/calafiori.svg" alt="Calafiori mod Everton hjemme i runde 8: 70,4 tusind kroner i forventet vækst. Arsenal giver 43,0: clean sheet, holdmål, resultat, mål imod og nederlag hjemme. Calafiori selv giver 25,4: mål, assist, skud på mål, sejrsmål og udligning. At være med giver 2,0: på banen og gult kort. Inputs: 66 % chance for sejr, Everton scorer ikke i 46 %, 92 % chance for at starte, 0,127 xG og 0,076 xA pr. 90 minutter" width="100%"></p>
+<p align="center"><img src="docs/img/delap.svg" alt="Delap mod Bournemouth ude i runde 11: 55,5 tusind kroner i forventet vækst. Delap selv giver 46,8: mål, assist, skud på mål, sejrsmål og udligning. Forest giver 4,9: holdmål, resultat, sejr på udebane og mål imod. At være med giver 3,8: på banen og gult kort. Inputs: 25 % chance for sejr, 92 % chance for at starte, 0,364 xG og 0,055 xA pr. 90 minutter" width="100%"></p>
 
-Sådan bliver tallene til kroner for én spiller. Calafiori ventes at stige 70.400 kr., når Arsenal tager imod Everton i runde 8, regnet med de data, modellen havde før deadline. Hvert led er en chance gange det, spillets regler giver, gange hvor meget han ventes at spille.
+Sådan bliver tallene til kroner for én spiller. Delap ventes at stige 55.500 kr., når Forest spiller ude mod Bournemouth i runde 11. Hvert led er en chance gange det, spillets regler giver, gange hvor meget han ventes at spille.
 
-61 % af det kommer fra Arsenal og ikke fra Calafiori selv. Køber du en forsvarer, køber du hans hold. For Haaland er det omvendt: 76 % af hans forventede vækst kommer fra hans egne mål og chancer.
+84 % af det kommer fra Delaps egne mål og chancer og kun 9 % fra Forest. Køber du en angriber, køber du hans chancer. Køber du en forsvarer, køber du hans hold: for Gabriel kommer 66 % af hans forventede vækst i runde 11 fra Arsenal.
 
-## Det samme for alle 589 spillere
+## Det samme for alle 591 spillere
 
-<p align="center"><img src="docs/img/alle-spillere.svg" alt="Alle 589 spillere efter forventet vækst resten af sæsonen. Bedst pr. position: Raya 897, Gabriel 905, Cole Palmer 1.135, Haaland 1.678. Calafiori ligger på 852 tusind kroner, nr. 2 af 195 forsvarere og nr. 23 af 589 i alt. 307 spillere ventes at give under 100 tusind kroner" width="100%"></p>
+<p align="center"><img src="docs/img/alle-spillere.svg" alt="Alle 591 spillere efter forventet vækst resten af sæsonen. Bedst pr. position: Raya 688, Gabriel 702, Barcola 856, Haaland 1.274. Delap ligger på 670 tusind kroner, nr. 10 af 71 angribere og nr. 20 af 591 i alt. 333 spillere ventes at give under 100 tusind kroner" width="100%"></p>
 
-Regnestykket gentages for hver kamp resten af sæsonen og for hver af de 589 spillere i spillet. For Calafiori giver det 852.000 kr. og en plads som nr. 2 blandt forsvarerne.
+Regnestykket gentages for hver kamp resten af sæsonen og for hver af de 591 spillere i spillet. For Delap giver det 670.000 kr. og en plads som nr. 10 blandt angriberne.
 
 Godt halvdelen af spillerne ventes at give under 100.000 kr., fordi de sjældent starter. De gode handler skal findes blandt de få spillere længst til højre.
 
 ## Før en handel anbefales
 
-<p align="center"><img src="docs/img/handlens-vaerdi.svg" alt="Foden ud og Mbeumo ind: +645 i forventet vækst, minus 72 i gebyr og 114 i tabt rente, giver +458 tusind kroner" width="100%"></p>
+<p align="center"><img src="docs/img/handlens-vaerdi.svg" alt="Thiago ud og Delap ind: +73,3 i forventet vækst, −29,9 i gebyr og +245,3 i rente, fordi Delap koster 2,45 mio. mindre. Det giver +288,8 tusind kroner" width="100%"></p>
 
-En handel regnes over resten af sæsonen og ikke kun næste runde. Fra gevinsten trækkes gebyret og den rente, du mister, når pengene står i en spiller i stedet for i banken.
+En handel regnes over resten af sæsonen og ikke kun næste runde. Gebyret trækkes fra, og renten regnes med: penge i spillere giver ikke de 1 % pr. runde, som de giver i banken. Her koster Delap 2,45 mio. kr. mindre end Thiago, så renten trækker op og ikke ned.
+
+Thiago er udelukket i runde 11-13. Derfor regnes han kun for runde 14-20, med den startchance, han havde før det røde kort.
 
 <details>
 <summary><b>Sådan ser det ud i terminalen</b></summary>
 <br>
 
-Eksempelholdet i [`eksempler/hold.json`](eksempler/hold.json) før runde 8:
+Mit hold før runde 11 ([`eksempler/hold.json`](eksempler/hold.json)), med modeksemplet fra de seks kontroller nedenfor:
 
 ```text
-$ python handel.py "Phil Foden > Bryan Mbeumo"
+$ python handel.py "Ezri Konsa > Riccardo Calafiori"
+hold R11: Raya, Magalhaes, Konsa, Cuyper, Gomez, Gross, Enciso, Delap, Kostoulas, Haaland, Schade
 
-Foden > Mbeumo
-  basis +458   forskel -25 % +297   K/2 +466   2K +443   ind pS -0,1 +324   ud pS +0,1 +340
-  -> ANBEFALES (positiv i 6 af 6; vaerst +297 tkr)
+Konsa > Calafiori
+  basis +47   forskel -25 % +4   K/2 +65   2K +22   ind pS -0,1 -33   ud pS +0,1 -25
+  -> anbefales IKKE (positiv i 4 af 6; vaerst -33 tkr)
 
-UD  Phil Foden (MCI, midfield/CM): g90 0.25  a90 0.25  pS naeste 0.37  pStart 0.38  ev_tot 387
-      bygger paa 2814 vaegtede startminutter (prioren vejer 26 %): 2024 MCI 1639 min (xg90 0.33); 2025 MCI 1945 min (xg90 0.26); 2026 MCI 275 min (xg90 0.54)
-      spilletid: RotoWire-status 0.37, startandel 0.4 over 15 klubkampe
-      ! tynd: 275 startmin i aar
-IND Bryan Mbeumo (MUN, midfield/AM): g90 0.40  a90 0.20  pS naeste 0.78  pStart 0.82  ev_tot 1032
-      bygger paa 3771 vaegtede startminutter (prioren vejer 21 %): 2024 BRE 3419 min (xg90 0.36); 2025 MUN 2644 min (xg90 0.45); 2026 MUN 630 min (xg90 0.58)
-      spilletid: RotoWire-status 0.78, startandel 0.87 over 15 klubkampe
+UD  Ezri Konsa (ARS, defense/CB): g90 0.05  a90 0.02  pS naeste 0.70  pStart 0.77  ev_tot 496
+      bygger paa 2802 vaegtede startminutter (prioren vejer 26 %): 2024 AVL 2892 min (xg90 0.04); 2025 AVL 3036 min (xg90 0.04); 2026 ARS 720 min (xg90 0.08)
+      spilletid: RotoWire-status 0.70, startandel 0.89 over 9 klubkampe
       ! klubskifte: minutter fra anden klub vaegtet x0.5
+      ! koncentration: 44 % af aarets xG fra eet skud
+IND Riccardo Calafiori (ARS, defense/FB): g90 0.12  a90 0.07  pS naeste 0.92  pStart 0.90  ev_tot 667
+      bygger paa 2550 vaegtede startminutter (prioren vejer 28 %): 2024 ARS 793 min (xg90 0.1); 2025 ARS 1656 min (xg90 0.17); 2026 ARS 749 min (xg90 0.15)
+      spilletid: RotoWire-status 0.92, startandel 0.87 over 15 klubkampe
+      ! koncentration: 42 % af aarets xG fra eet skud
 ```
 
-Under hver spiller står, hvad tallet bygger på: antal minutter, hvor meget det typiske for rollen vejer, og hvad man bør kigge efter. Foden har kun startet tre kampe i år og starter sjældent for tiden. Mbeumo bygger på tre hele sæsoner.
+Under hver spiller står, hvad tallet bygger på: antal minutter, hvor meget det typiske for rollen vejer, og hvad man bør kigge efter. Konsas minutter fra Aston Villa tæller halvt, og RotoWire er i tvivl om, at han starter. Gevinsten afhænger af spilletiden, og den er det sværeste at forudsige.
 
 </details>
 
-<p align="center"><img src="docs/img/seks-spoergsmaal.svg" alt="Seks kontroller: Foden til Mbeumo holder i alle seks og anbefales. Rice til Rogers er positiv i basis, men fejler tre af de seks" width="100%"></p>
+<p align="center"><img src="docs/img/seks-spoergsmaal.svg" alt="Seks kontroller: Thiago til Delap holder i alle seks og anbefales. Konsa til Calafiori er positiv med modellens bedste bud, men fejler to af de seks" width="100%"></p>
 
 Modellen kan tage fejl, så en handel skal også betale sig, hvis den gør. Målingerne viser tre steder, hvor prognoser som disse rammer ved siden af, og hver kontrol regner handlen igen, som om en af fejlene var sket:
 
@@ -161,9 +165,9 @@ Sammen med basis, altså modellens bedste bud, giver det seks kontroller. Ét ne
 
 ### Rundens handel
 
-<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 11, nr. 19 af over 28.000 hold efter ti runder: Raya; Gabriel, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Delap, Haaland (kaptajn), Kostoulas. Rundens handel: Thiago ud, udelukket i tre kampe, Delap ind, +185 tusind kroner over resten af sæsonen og ja i alle seks kontroller" width="100%"></p>
+<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 11, nr. 19 af over 28.000 hold efter ti runder: Raya; Gabriel, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Delap, Haaland (kaptajn), Kostoulas. Rundens handel: Thiago ud (udelukket i tre kampe), Delap ind, +289 tusind kroner over resten af sæsonen og ja i alle seks kontroller" width="100%"></p>
 
-Før runde 11 skiftede jeg Thiago ud med Delap. Thiago fik direkte rødt kort i runde 10 og er udelukket i de næste tre kampe, så han giver 0 point i runde 11-13. Modellen regnede både et permanent salg og en midlertidig afløser med genkøb bagefter. Den prøvede afløsere i alle tre positioner, fordi en formation med to angribere også var mulig. Delap gav 185.000 kr. over resten af sæsonen og 92.000 kr. i den værste af de seks kontroller. Han koster 2,5 mio. kr. mindre end Thiago, så pengene står i banken og holder et genkøb åbent, når Thiago er tilbage. Kortet bliver opdateret efter hver runde.
+Før runde 11 skiftede jeg Thiago ud med Delap, handlen fra eksemplerne ovenfor. Thiago fik direkte rødt kort i runde 10 og giver 0 point i runde 11-13. Modellen prøvede afløsere i alle tre positioner, fordi en formation med to angribere også var mulig, og Delap var den bedste: 289.000 kr. over resten af sæsonen og 210.000 kr. i den værste af de seks kontroller. En midlertidig afløser med genkøb af Thiago efter udelukkelsen gav mindre, 185.000 kr. Forskellen i pris står i banken, så et genkøb er stadig muligt. Kortet bliver opdateret efter hver runde.
 
 ## Virker det?
 
@@ -180,7 +184,7 @@ Hver regel er kun taget ind, fordi den gjorde backtesten bedre. Det gælder ogs�
 
 ## Kom i gang
 
-Du skal bruge Python 3.10 eller nyere. Jeg anbefaler at bruge repoet sammen med [Claude Code](https://claude.com/claude-code). [CLAUDE.md](CLAUDE.md) indeholder arbejdsreglerne: `kvalitet.py` skal stå uden STOP, en handel skal holde i alle seks kontroller, og modellen fryses før deadline. Claude Code læser filen automatisk og følger reglerne. Du kan spørge på almindeligt dansk, for eksempel *"Hent data til runde 9 og find en afløser for Foden"*, og få svaret regnet på samme måde hver gang.
+Du skal bruge Python 3.10 eller nyere. Jeg anbefaler at bruge repoet sammen med [Claude Code](https://claude.com/claude-code). [CLAUDE.md](CLAUDE.md) indeholder arbejdsreglerne: `kvalitet.py` skal stå uden STOP, en handel skal holde i alle seks kontroller, og modellen fryses før deadline. Claude Code læser filen automatisk og følger reglerne. Du kan spørge på almindeligt dansk, for eksempel *"Hent data til runde 11 og find en afløser for Konsa"*, og få svaret regnet på samme måde hver gang.
 
 **Kør det så tæt på deadline som muligt.** Skader, pressemøder og forventede opstillinger ændrer sig hele ugen, og jo tættere du kommer på kampene, jo mindre ændrer data sig. RotoWire skal hentes højst 24 timer før deadline. Selve metoden ændres aldrig det sidste døgn: modellen fryses 24 timer før deadline, og derefter kommer kun nye data ind.
 
@@ -199,7 +203,7 @@ python hent.py rotowire 11                  # højst 24 timer før deadline
 python model.py 11
 python facit_alle.py                        # facit fra holdet.dk's priser (hent holdet efter hver runde)
 python kvalitet.py --runde 11               # STOP betyder: ingen beslutning på disse data
-python handel.py --skan "Phil Foden"        # de bedste afløsere, vurderet i alle seks kontroller
+python handel.py --skan "Ezri Konsa"         # de bedste afløsere, vurderet i alle seks kontroller
 ```
 
 Testene kører uden data: `python test_model.py`. Hvad du gør før deadline og efter hver runde, står i [docs/arbejdsgang.md](docs/arbejdsgang.md).
