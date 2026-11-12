@@ -11,7 +11,7 @@
 
 <h3 align="center">Hvem skal du købe, og hvem skal du sælge?</h3>
 
-Denne model er lavet til Premier Manager på [holdet.dk](https://www.holdet.dk) og er brugt på mit eget hold i hver runde siden sæsonstart. Den giver alle spillere ét tal: hvor meget de ventes at stige i værdi resten af sæsonen. Og den har en fast regel for, hvornår en handel betaler sig.
+Denne model er lavet til Premier Manager på [holdet.dk](https://www.holdet.dk) og er brugt på mit eget hold i hver runde siden sæsonstart. Den giver alle spillere ét tal: hvor meget de i alt ventes at stige i værdi resten af sæsonen. Før runde 11 er det runde 11-20. Og den har en fast regel for, hvornår en handel betaler sig.
 
 **Mit hold, Skjoldes Juveler, ligger nr. 19 af over 28.000 efter ti runder.** Ti runder er for lidt til at skille dygtighed fra held, så det er et godt tegn og ikke et bevis. Hvorfor står under [Den store fælde](#den-store-fælde-held-ligner-talent).
 
@@ -39,8 +39,8 @@ Modellens mål er derfor holdets samlede værdi, netto af gebyr og rente. Det ha
 |---|---|---|
 | **holdet.dk** | Priser, klubber, positioner og kampprogram | Point er pris, så spillets egne tal er facit. holdet.dk er eneste autoritet, også når spillets univers afviger fra virkeligheden |
 | **FotMob** | Starter, minutter, xG og xA fra hver kamp i tre sæsoner, i Premier League og de fire andre store ligaer | xG måler chancernes kvalitet og svinger mindre end mål. Det er grundlaget for spillerens egen rate |
-| **Pinnacle** | Odds på næste runde: resultat og over/under 2,5 mål | Markedet er det bedste offentlige bud på hver kamp. Herfra kommer sejrschance, mål for og imod og clean sheet. For Gabriel står det for 66 % af værdien i runde 11 |
-| **RotoWire** | Forventede startopstillinger til næste runde | Alt ganges med spilletid. En spiller på bænken giver −5 |
+| **Pinnacle** | Odds på næste runde: resultat og over/under 2,5 mål | Markedet er det bedste offentlige bud på hver kamp. Herfra kommer sejrschance, mål for og imod og clean sheet. For Gabriel står det for 66 % af hans forventede vækst i runde 11 |
+| **RotoWire** | Forventede startopstillinger til næste runde | Alt ganges med spilletid. En spiller på bænken giver −5.000 kr. i runden |
 
 Før hver deadline tjekker `kvalitet.py` data. Er en fil for gammel, eller har en kilde svaret forkert, stopper den hellere end at regne videre.
 
@@ -58,13 +58,13 @@ Hver spillers tal bygger på tre regler: hvor meget han skaber, når han er på 
 
 ### 1. Hvad spilleren skaber: Marcel
 
-<p align="center"><img src="docs/img/marcel.svg" alt="Marcel: Tom Tangos baseballprognose bruger de seneste tre sæsoner vægtet 5/4/3 og trækker mod gennemsnittet. Her bruges xG og xA fra starter, det typiske for rollen med 1.000 minutters vægt, og minutter i en anden klub tæller halvt. Delaps bud på 0,36 bygger 24 procent på i år i Forest, 12 procent på sidste sæson i Chelsea, 28 procent på sæsonen før i Ipswich og 36 procent på det typiske for en angriber" width="100%"></p>
+<p align="center"><img src="docs/img/marcel.svg" alt="Marcel: Tom Tangos baseballprognose bruger de seneste tre sæsoner vægtet 5/4/3 og trækker mod gennemsnittet. Her bruges xG og xA fra starter, det typiske for rollen med 1.000 minutters vægt, og minutter i en anden klub tæller halvt. Delaps bud på 0,36 xG pr. kamp bygger 24 procent på i år i Forest, 12 procent på sidste sæson i Chelsea, 28 procent på sæsonen før i Ipswich og 36 procent på det typiske for en angriber" width="100%"></p>
 
 Marcel er en prognosemodel fra baseball. Tom Tango lavede den for at vise, hvor langt man kommer med det mest basale: de seneste tre sæsoner vægtet 5/4/3 og et træk mod gennemsnittet, indtil der er data nok. Navnet kommer fra "Marcel the Monkey", fordi den skulle være så enkel, at en abe kunne regne den ud. Tabellen viser Marcels fire byggesten, og hvordan de er oversat til fodbold.
 
 Premier Manager har samme problem som baseball: få kampe, meget støj og en stærk fristelse til at tro på den seneste form. Oversat til fodbold måler modellen xG og xA i stedet for mål, kun fra kampe, spilleren starter, og trækker mod det typiske for spillerens rolle. Straffespark regnes for sig: raten bygger på xG uden straffe, og bagefter lægges ligaens straffe-xG pr. kamp gange spillerens andel af klubbens straffe til. Hvert tal kan følges tilbage til de minutter og sæsoner, det bygger på.
 
-<p align="center"><img src="docs/img/tro-paa-det-sete.svg" alt="Tavernier har 0,45 xG uden straffe i år mod 0,25 før, og modellen siger 0,28. Palmer har 0,18 i år mod 0,32 før, og modellen siger 0,27" width="100%"></p>
+<p align="center"><img src="docs/img/tro-paa-det-sete.svg" alt="Tavernier har 0,45 xG pr. kamp uden straffe i år mod 0,25 før, og modellen siger 0,28. Palmer har 0,18 i år mod 0,32 før, og modellen siger 0,27" width="100%"></p>
 
 Jo flere kampe, jo mere vejer spillerens egne tal. Efter cirka elleve kampe vejer de mere end det typiske for rollen. Tavernier og Palmer viser, hvordan det virker: en god eller dårlig start flytter vurderingen, men overtager den ikke.
 
@@ -97,25 +97,27 @@ Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
 
 ## Et regnestykke: Delap mod Bournemouth
 
-<p align="center"><img src="docs/img/delap.svg" alt="Delap mod Bournemouth ude i runde 11: 55,5 tusind kroner i forventet vækst. Delap selv giver 46,8: mål, assist, skud på mål, sejrsmål og udligning. Forest giver 4,9: holdmål, resultat, sejr på udebane og mål imod. At være med giver 3,8: på banen og gult kort. Inputs: 25 % chance for sejr, 92 % chance for at starte, 0,364 xG og 0,055 xA pr. 90 minutter" width="100%"></p>
+<p align="center"><img src="docs/img/delap.svg" alt="Delap mod Bournemouth ude i runde 11: 55,5 tusind kroner i forventet vækst i den ene kamp. Delap selv giver 46,8: mål, assist, skud på mål, sejrsmål og udligning. Forest giver 4,9: holdmål, resultat, sejr på udebane og mål imod. At være med giver 3,8: på banen og gult kort. Inputs: 25 % chance for sejr, 92 % chance for at starte, 0,364 xG og 0,055 xA pr. 90 minutter" width="100%"></p>
 
 Sådan bliver tallene til kroner for én spiller. Delap ventes at stige 55.500 kr., når Forest spiller ude mod Bournemouth i runde 11. Hvert led er en chance gange det, spillets regler giver, gange hvor meget han ventes at spille.
 
-84 % af det kommer fra Delaps egne mål og chancer og kun 9 % fra Forest. Køber du en angriber, køber du hans chancer. Køber du en forsvarer, køber du hans hold: for Gabriel kommer 66 % af hans forventede vækst i runde 11 fra Arsenal.
+84 % af de 55.500 kr. kommer fra Delaps egne mål og chancer og kun 9 % fra Forest. Køber du en angriber, køber du hans chancer. Køber du en forsvarer, køber du hans hold: for Gabriel kommer 66 % af hans forventede vækst i runde 11 fra Arsenal.
 
 ## Det samme for alle 591 spillere
 
-<p align="center"><img src="docs/img/alle-spillere.svg" alt="Alle 591 spillere efter forventet vækst resten af sæsonen. Bedst pr. position: Raya 688, Gabriel 702, Barcola 856, Haaland 1.274. Delap ligger på 670 tusind kroner, nr. 10 af 71 angribere og nr. 20 af 591 i alt. 333 spillere ventes at give under 100 tusind kroner" width="100%"></p>
+<p align="center"><img src="docs/img/alle-spillere.svg" alt="Alle 591 spillere efter forventet vækst i alt for runde 11-20, i tusind kroner, før gebyr og rente. Bedst pr. position: Raya 688, Gabriel 702, Barcola 856, Haaland 1.274. Delap ligger på 670 tusind kroner, nr. 10 af 71 angribere og nr. 20 af 591 i alt. 333 spillere ventes at give under 100 tusind kroner" width="100%"></p>
 
-Regnestykket gentages for hver kamp resten af sæsonen og for hver af de 591 spillere i spillet. For Delap giver det 670.000 kr. og en plads som nr. 10 blandt angriberne.
+Regnestykket gentages for hver kamp resten af sæsonen og for hver af de 591 spillere i spillet, og kampene lægges sammen. For Delap giver det 670.000 kr. i alt for runde 11-20 og en plads som nr. 10 blandt angriberne. Det er hans eget tal: det er ikke sammenlignet med nogen anden spiller, og gebyr og rente er ikke trukket fra.
 
-Godt halvdelen af spillerne ventes at give under 100.000 kr., fordi de sjældent starter. De gode handler skal findes blandt de få spillere længst til højre.
+Godt halvdelen af spillerne ventes at give under 100.000 kr. i alt resten af sæsonen, fordi de sjældent starter. De gode handler skal findes blandt de få spillere længst til højre.
 
 ## Før en handel anbefales
 
-<p align="center"><img src="docs/img/handlens-vaerdi.svg" alt="Thiago ud og Delap ind: +73,3 i forventet vækst, −29,8 i gebyr og +245,3 i rente, fordi Delap koster 2,45 mio. mindre. Det giver +288,8 tusind kroner" width="100%"></p>
+<p align="center"><img src="docs/img/handlens-vaerdi.svg" alt="Thiago ud og Delap ind før runde 11, over resten af sæsonen: Delap ventes at stige 73,3 tusind kroner mere end Thiago, gebyret koster 29,8, og 2,45 mio. mere i banken giver 245,3 i rente. Holdet ventes at være 288,8 tusind kroner mere værd efter runde 20 end med Thiago" width="100%"></p>
 
-En handel regnes over resten af sæsonen og ikke kun næste runde. Gebyret trækkes fra, og renten regnes med: penge i spillere giver ikke de 1 % pr. runde, som de giver i banken. Her koster Delap 2,45 mio. kr. mindre end Thiago, så renten trækker op og ikke ned.
+En handel regnes som forskellen mellem to hold: holdet med den nye spiller og holdet, hvis du beholder den gamle. Begge regnes over resten af sæsonen og ikke kun næste runde. Gebyret trækkes fra, og renten regnes med: penge i spillere giver ikke de 1 % pr. runde, som de giver i banken. Her koster Delap 2,48 mio. kr. mindre end Thiago, og efter gebyret står der 2,45 mio. kr. mere i banken, så renten trækker op og ikke ned.
+
+**+288,8 betyder, at holdet ventes at være 288.800 kr. mere værd efter runde 20 med Delap end med Thiago.** Delap selv ventes at stige 73.300 kr. mere end Thiago. Resten er renten af de penge, han er billigere, minus gebyret.
 
 Thiago er udelukket i runde 11-13. Derfor regnes han kun for runde 14-20, med den startchance, han havde før det røde kort.
 
@@ -144,11 +146,13 @@ IND Riccardo Calafiori (ARS, defense/FB): g90 0.12  a90 0.07  pS naeste 0.92  pS
       ! koncentration: 42 % af aarets xG fra eet skud
 ```
 
+Tallene i terminalen er i tusind kroner. `basis +47` betyder, at holdet ventes at være 47.000 kr. mere værd efter runde 20 med Calafiori end med Konsa, efter gebyr og rente. De fem andre er samme regnestykke, regnet som om en af de kendte fejl var sket. `ev_tot` er spillerens egen forventede vækst i alt for runde 11-20, `g90` og `a90` er xG og xA pr. 90 minutter, og `pS naeste` og `pStart` er chancen for at starte i næste runde og i resten af sæsonen.
+
 Under hver spiller står, hvad tallet bygger på: antal minutter, hvor meget det typiske for rollen vejer, og hvad man bør kigge efter. Konsas minutter fra Aston Villa tæller halvt, og RotoWire er i tvivl om, at han starter. Gevinsten afhænger af spilletiden, og den er det sværeste at forudsige.
 
 </details>
 
-<p align="center"><img src="docs/img/seks-spoergsmaal.svg" alt="Seks kontroller: Thiago til Delap holder i alle seks og anbefales. Konsa til Calafiori er positiv med modellens bedste bud, men fejler to af de seks" width="100%"></p>
+<p align="center"><img src="docs/img/seks-spoergsmaal.svg" alt="Seks kontroller. Tallet er, hvor mange tusind kroner mere holdet ventes at være værd efter runde 20 med handlen end uden. Thiago til Delap: +289, +270, +278, +301, +210 og +258, ja i alle seks, så handlen anbefales. Konsa til Calafiori: +47 med modellens bedste bud, men nej i to af de seks" width="100%"></p>
 
 Modellen kan tage fejl, så en handel skal også betale sig, hvis den gør. Målingerne viser tre steder, hvor prognoser som disse rammer ved siden af, og hver kontrol regner handlen igen, som om en af fejlene var sket:
 
@@ -158,35 +162,35 @@ Modellen kan tage fejl, så en handel skal også betale sig, hvis den gør. Mål
 | Vægten på spillerens egne tal kan være for høj eller for lav | K/2 og 2K |
 | Spilletid er svær at forudsige | Den nye spiller −0,1 og den gamle +0,1 i spilletid |
 
-Sammen med basis, altså modellens bedste bud, giver det seks kontroller. Ét nej er nok til at beholde holdet. Hviler en ny spillers tal over 50 % på det typiske for rollen, anbefales han aldrig uden et menneskes vurdering.
+Sammen med basis, altså modellens bedste bud, giver det seks kontroller. Hver kontrol giver ét tal: hvor meget mere holdet ventes at være værd efter runde 20 med handlen end uden, efter gebyr og rente. Er tallet ikke over 0, er svaret nej, og ét nej er nok til at beholde holdet. Hviler en ny spillers tal over 50 % på det typiske for rollen, anbefales han aldrig uden et menneskes vurdering.
 
 > [!TIP]
 > **Oftest er svaret at beholde holdet.** En handel koster gebyr og rente, så den skal kunne betale sig, også hvis tallene er lidt for optimistiske.
 
 ### Rundens handel
 
-<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 11, nr. 19 af over 28.000 hold efter ti runder: Raya; Gabriel, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Delap, Haaland (kaptajn), Kostoulas. Rundens handel: Thiago ud (udelukket i tre kampe), Delap ind, +289 tusind kroner over resten af sæsonen og ja i alle seks kontroller" width="100%"></p>
+<p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 11, nr. 19 af over 28.000 hold efter ti runder: Raya; Gabriel, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Delap, Haaland (kaptajn), Kostoulas. Rundens handel: Thiago ud (udelukket i tre kampe), Delap ind, holdet ventes at være 289 tusind kroner mere værd efter runde 20 end med Thiago og ja i alle seks kontroller" width="100%"></p>
 
-Før runde 11 skiftede jeg Thiago ud med Delap, handlen fra eksemplerne ovenfor. Thiago fik direkte rødt kort i runde 10 og giver 0 point i runde 11-13. Modellen prøvede afløsere i alle tre positioner, fordi en formation med to angribere også var mulig, og Delap var den bedste: 289.000 kr. over resten af sæsonen og 210.000 kr. i den værste af de seks kontroller. De to nærmeste var også angribere. Tal i tusind kroner over resten af sæsonen:
+Før runde 11 skiftede jeg Thiago ud med Delap, handlen fra eksemplerne ovenfor. Thiago fik direkte rødt kort i runde 10 og giver 0 point i runde 11-13. Modellen prøvede afløsere i alle tre positioner, fordi en formation med to angribere også var mulig, og Delap var den bedste: med ham ventes holdet at være 289.000 kr. mere værd efter runde 20 end med Thiago, og 210.000 kr. mere i den værste af de seks kontroller. De to nærmeste var også angribere. Hver række er regnet som i "Hvad er en handel værd?" ovenfor, i tusind kroner:
 
-| | Pris | Mere end Thiago | Rente | Gebyr | Gevinst | Værste kontrol |
+| | Pris | Stiger mere end Thiago | Rente | Gebyr | I alt mere end med Thiago | Værste kontrol |
 |---|---:|---:|---:|---:|---:|---:|
 | **Liam Delap** (Forest) | 2,99 mio. | +73,3 | +245,3 | −29,8 | **+288,8** | +210 |
 | Gonzalo García (Fulham) | 3,77 mio. | +86,7 | +166,2 | −37,7 | +215,2 | +138 |
 | Dominic Calvert-Lewin (Leeds) | 5,29 mio. | +238,2 | +12,8 | −52,9 | +198,1 | +105 |
 
-Delap er bedst i alle seks kontroller. Calvert-Lewin er den bedste spiller af de tre og ventes at give 165.000 kr. mere end Delap, men han koster 2,3 mio. mere, og i banken giver de 232.500 kr. i rente. García ventes at give 13.000 kr. mere end Delap, men koster 0,78 mio. mere, og hans tal bygger på færrest kampe: det typiske for en angriber vejer 48 %. Den bedste spiller er ikke altid den bedste handel.
+Delap er bedst i alle seks kontroller. Calvert-Lewin er den bedste spiller af de tre og ventes at stige 165.000 kr. mere end Delap resten af sæsonen, men han koster 2,3 mio. mere, og i banken giver de 232.500 kr. i rente. García ventes at stige 13.000 kr. mere end Delap, men koster 0,78 mio. mere, og hans tal bygger på færrest kampe: det typiske for en angriber vejer 48 %. Den bedste spiller er ikke altid den bedste handel.
 
-En midlertidig afløser med genkøb af Thiago efter udelukkelsen gav mindre, 185.000 kr. Forskellen i pris står i banken, så et genkøb er stadig muligt. Kortet bliver opdateret efter hver runde.
+En midlertidig afløser med genkøb af Thiago efter udelukkelsen gav mindre: 185.000 kr. mere end at beholde Thiago. Forskellen i pris står i banken, så et genkøb er stadig muligt. Kortet bliver opdateret efter hver runde.
 
 ## Virker det?
 
-<p align="center"><img src="docs/img/virker-det.svg" alt="Kan man stole på forskellene? Hældning 1,0 er præcist. Runde 4-5: 0,73. Runde 6-7: 1,08. Runde 8: 0,79. Runde 9-10: 0,91. Runde 4-10 samlet efter antal kampe: under 5 1,00, 5-15 0,62, over 15 0,94, alle 0,94. Top 5 % leverede 111 % af det lovede" width="100%"></p>
+<p align="center"><img src="docs/img/virker-det.svg" alt="Kan man stole på forskellene? Målt på én runde ad gangen, og hældning 1,0 er præcist. Runde 4-5: 0,73. Runde 6-7: 1,08. Runde 8: 0,79. Runde 9-10: 0,91. Runde 4-10 samlet efter antal kampe: under 5 1,00, 5-15 0,62, over 15 0,94, alle 0,94. Top 5 % leverede 111 % af det lovede" width="100%"></p>
 
-Hver runde fra 4 til 10 er regnet, som modellen ville have set den før deadline: kun kampe, odds og opstillinger, der fandtes på det tidspunkt. Bagefter måles, hvor meget af forskellen mellem spillerne der holdt. 1,0 er præcist, og under 1 betyder, at prognosen overdriver forskellene.
+Her måles én runde ad gangen: hvad hver spiller ventedes at give i runden, mod hvad han faktisk gav. Hver runde fra 4 til 10 er regnet, som modellen ville have set den før deadline: kun kampe, odds og opstillinger, der fandtes på det tidspunkt. Bagefter måles, hvor meget af forskellen mellem spillerne der holdt. 1,0 er præcist, og under 1 betyder, at prognosen overdriver forskellene. En spiller-runde er én spiller i én runde.
 
 - **Samlet holder det.** Over 3.551 spiller-runder er hældningen 0,94. Det ligger inden for de 25 %, som kontrollen "forskellen −25 %" dækker.
-- **Toppen leverer det lovede.** De 5 % højest rangerede spillere leverede 111 % af det lovede, top 10 % 103 % og top 25 % 99 %.
+- **Toppen leverer det lovede.** I hver runde leverede de 5 % højest rangerede spillere tilsammen 111 % af det, modellen lovede for runden, top 10 % 103 % og top 25 % 99 %.
 - **Spillere med 5-15 kampe er det svage punkt.** Hældningen er 0,62, så forskellene i den gruppe er overdrevne. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
 - **Én runde er for lidt.** Hældningen svinger fra 0,73 i runde 4-5 til 1,08 i runde 6-7. Først samlet siger tallene noget.
 
