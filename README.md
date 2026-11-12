@@ -167,7 +167,17 @@ Sammen med basis, altså modellens bedste bud, giver det seks kontroller. Ét ne
 
 <p align="center"><img src="docs/img/mit-hold.svg" alt="Skjoldes Juveler i runde 11, nr. 19 af over 28.000 hold efter ti runder: Raya; Gabriel, Konsa, De Cuyper; Schade, Gómez, Gross, Enciso; Delap, Haaland (kaptajn), Kostoulas. Rundens handel: Thiago ud (udelukket i tre kampe), Delap ind, +289 tusind kroner over resten af sæsonen og ja i alle seks kontroller" width="100%"></p>
 
-Før runde 11 skiftede jeg Thiago ud med Delap, handlen fra eksemplerne ovenfor. Thiago fik direkte rødt kort i runde 10 og giver 0 point i runde 11-13. Modellen prøvede afløsere i alle tre positioner, fordi en formation med to angribere også var mulig, og Delap var den bedste: 289.000 kr. over resten af sæsonen og 210.000 kr. i den værste af de seks kontroller. En midlertidig afløser med genkøb af Thiago efter udelukkelsen gav mindre, 185.000 kr. Forskellen i pris står i banken, så et genkøb er stadig muligt. Kortet bliver opdateret efter hver runde.
+Før runde 11 skiftede jeg Thiago ud med Delap, handlen fra eksemplerne ovenfor. Thiago fik direkte rødt kort i runde 10 og giver 0 point i runde 11-13. Modellen prøvede afløsere i alle tre positioner, fordi en formation med to angribere også var mulig, og Delap var den bedste: 289.000 kr. over resten af sæsonen og 210.000 kr. i den værste af de seks kontroller. De to nærmeste var også angribere. Tal i tusind kroner over resten af sæsonen:
+
+| | Pris | Mere end Thiago | Rente | Gebyr | Gevinst | Værste kontrol |
+|---|---:|---:|---:|---:|---:|---:|
+| **Liam Delap** (Forest) | 2,99 mio. | +73,3 | +245,3 | −29,8 | **+288,8** | +210 |
+| Gonzalo García (Fulham) | 3,77 mio. | +86,7 | +166,2 | −37,7 | +215,2 | +138 |
+| Dominic Calvert-Lewin (Leeds) | 5,29 mio. | +238,2 | +12,8 | −52,9 | +198,1 | +105 |
+
+Delap er bedst i alle seks kontroller. Calvert-Lewin er den bedste spiller af de tre og ventes at give 165.000 kr. mere end Delap, men han koster 2,3 mio. mere, og i banken giver de 232.500 kr. i rente. García ventes at give 13.000 kr. mere end Delap, men koster 0,78 mio. mere, og hans tal bygger på færrest kampe: det typiske for en angriber vejer 48 %. Den bedste spiller er ikke altid den bedste handel.
+
+En midlertidig afløser med genkøb af Thiago efter udelukkelsen gav mindre, 185.000 kr. Forskellen i pris står i banken, så et genkøb er stadig muligt. Kortet bliver opdateret efter hver runde.
 
 ## Virker det?
 
