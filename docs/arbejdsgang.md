@@ -6,22 +6,21 @@ Alle scripts køres fra roden af repoet og bruger kun Pythons standardbibliotek.
 
 ```bash
 cp eksempler/hold.json eksempler/manager_input.json .     # ret hold.json til dit eget hold
-python hent.py holdet                                     # priser, klubber og kampplan
-python hent.py liga && python hent.py liga 2025           # understat, i år og sidste sæson
-python model.py 11                                        # henter spillerhistorik første gang (~5 min)
-python facit_alle.py                                      # realiserede point for alle spillere hidtil
+python hent.py holdet                                     # priser, klubber, kampplan og resultater
+python hent.py fotmob historik                            # 2024-2025 i PL og de fire andre store ligaer (~3.500 kampe, ca. 45 min)
+python hent.py fotmob                                     # årets PL-kampe
+python hent.py odds historik 10                           # odds for de spillede runder 1-10
 python test_model.py                                      # tests uden data
 ```
 
-Første kørsel af `model.py` henter understats spillerfiler, én pr. spiller med en halv sekunds pause, og kampfilerne for sæsonen. Bagefter ligger det hele i `input/`.
+Historikken hentes én gang og ligger derefter i `input/` som en kompakt fil pr. kamp. `hent.py fotmob` henter kun de kampe, der er kommet til siden sidst.
 
 ## Før hver deadline
 
 1. **Hent data**
    ```bash
-   python hent.py holdet          # når priserne har flyttet sig, altså efter hver runde
-   python hent.py liga
-   python hent.py betfair 11      # kræver BETFAIR_AK, se nedenfor
+   python hent.py fotmob          # årets kampe, inklusive seneste runde
+   python hent.py odds 11         # Pinnacle, højst 48 timer før deadline
    python hent.py rotowire 11     # højst 24 timer før deadline
    ```
 2. **Kør modellen og portene**
@@ -29,7 +28,7 @@ Første kørsel af `model.py` henter understats spillerfiler, én pr. spiller me
    python model.py 11
    python kvalitet.py --runde 11  # deadline læses fra holdets kampplan; stop ved STOP
    ```
-3. **Præregistrér**, før du ser på handler: `python praeregistrer.py 8`. Filen kan ikke overskrives. Henter du RotoWire igen tæt på deadline, så præregistrér med et mærke, fx `8-lor`.
+3. **Præregistrér**, før du ser på handler: `python praeregistrer.py 11`. Filen kan ikke overskrives. Henter du RotoWire igen tæt på deadline, så præregistrér med et mærke, fx `11-lor`.
 4. **Vurdér handler**
    ```bash
    python handel.py --skan "Phil Foden"                         # de 15 bedste afløsere i alle seks kontroller
@@ -43,12 +42,12 @@ Første kørsel af `model.py` henter understats spillerfiler, én pr. spiller me
 ## Efter hver runde
 
 ```bash
-python hent.py holdet && python hent.py liga
-python facit_alle.py          # realiserede point fra understat
+python hent.py holdet         # priserne efter runden: de er facit
+python facit_alle.py          # point for alle spillere = prisændringen siden sidste runde
 python kalibrering_alle.py    # β, MSE og top-test pr. præregistrering
 ```
 
-Opdatér derefter `hold.json` med runde, hold, gebyrfri spillere og kapital fra appen. Skriv udfaldet i beslutningsloggen.
+Facit kræver et holdet-snapshot efter hver runde. Glemmer du en runde, kan den ikke regnes bagefter. Opdatér derefter `hold.json` med runde, hold, gebyrfri spillere og kapital fra appen, og skriv udfaldet i beslutningsloggen.
 
 ## Dine egne filer
 
@@ -57,41 +56,28 @@ Opdatér derefter `hold.json` med runde, hold, gebyrfri spillere og kapital fra 
 | `hold.json` | Næste beslutningsrunde, dine 11, de gebyrfri spillere, kapital (holdværdi ved vinduets start + bank, i mio.) og kaptajn |
 | `manager_input.json` | Det eneste sted, dit skøn går ind i modellen: `pStart` og/eller `rolle`, med en grund og en udløbsdato. Hold det under ~5 poster |
 | `beslutningslog.csv` | Alle vurderede handler med de seks kontroller og den største risiko. Oprettes ved første `--log` |
-| `point-historik.json` | Valgfri. Holdets egne point pr. spiller og runde, så `facit_alle.py` kan validere sig selv |
+| `facit/ekstra.json` | Valgfri. Facit for runder, hvor du ikke har et holdet-snapshot: `{"runder": {"<runde>": {"<personId>": <point>}}}` |
 
 ## Datakilderne og deres fælder
 
 | Kilde | Rolle |
 |---|---|
-| **holdet.dk** | Pris, klub, position og kampplan. Eneste autoritet på klubtilhør, også når spillets univers afviger fra virkeligheden |
-| **understat** | Starter, minutter, xG, xA, roller og facit |
-| **Betfair** | Holdstyrke fra Match Odds og "begge hold scorer" |
+| **holdet.dk** | Pris, klub, position, kampplan og facit. Eneste autoritet på klubtilhør, også når spillets univers afviger fra virkeligheden |
+| **FotMob** | Starter, minutter, xG, xA, positioner og skud (med situation, så straffe kan skilles fra) |
+| **Pinnacle** | Odds på næste runde: resultat og over/under 2,5 mål. Spillede runder fra football-data.co.uk |
 | **RotoWire** | Forventede opstillinger og skader til næste runde |
-
-> [!WARNING]
-> I november 2026 er understat nede, og Betfair lukker for danske kunder 18/11. Erstatningerne og hvordan de er testet står i [metode.md](metode.md#datakilderne-i-november-2026).
 
 Fælderne er tavse. De giver ikke en fejl, bare forkerte tal. Derfor er de gjort til porte i `hent.py` og `kvalitet.py`:
 
-- **understat** kræver headeren `X-Requested-With: XMLHttpRequest`. Uden den svarer serveren 404-HTML på 461 bytes, og en løkke skriver tomme filer uden at klage.
-- **holdet.dk** flyttede sit API fra `/api/season/` til `/api/fantasy/` i november 2026. Den gamle sti giver 404, og forkerte stier giver 200 med en HTML-skal. En forældet holdet-fil giver forkerte klubber og priser. `kvalitet.py` stopper, hvis priserne ikke stemmer med startpris + facit-point.
-- **Betfair** skal hentes på engelsk (`locale=en`), og markedstypen skal stå i søgningens hovedfilter. Ellers kommer der Match Odds i filen for "begge hold scorer", og runden falder stille ud af holdstyrken. Betfair prissætter reelt kun én runde pålideligt frem.
+- **holdet.dk** har sit API under `/api/fantasy/`. Forkerte stier giver 200 eller 404 med en HTML-skal. En forældet holdet-fil giver forkerte klubber og priser, så `kvalitet.py` stopper, hvis filen er hentet før seneste runde sluttede.
+- **FotMob** er et uofficielt API, der kan ændre sig. `hent.py` stopper, hvis svaret ikke er JSON, eller en kamp ikke har 22 startere og spillerstatistik. `kvalitet.py` stopper, hvis en spillet kamp mangler i cachen. Positionskoderne (`positionId`) oversættes til roller i `model.fm_pos`.
+- **Pinnacle** svares fra et åbent guest-API. Modellen bruger moneyline og linjen 2,5 mål, som også findes, når hovedlinjen er en anden. `kvalitet.py` stopper, hvis en af rundens kampe mangler, eller sandsynlighederne er uplausible. Oddsene prissætter kun næste runde; resten af sæsonen regnes på holdstyrken.
 - **RotoWire** skifter fra forudsagt til bekræftet opstilling omkring en time før kampstart. Hent højst 24 timer før deadline.
-
-### Betfair-nøglen
-
-Betfairs offentlige web-endpoints kræver en app-nøgle (`_ak`), den samme som betfair.com's egen side bruger. Repoet indeholder ingen nøgle. Sæt den som miljøvariabel:
-
-```bash
-export BETFAIR_AK=...            # bash
-$env:BETFAIR_AK = "..."          # PowerShell
-```
 
 ## En ny sæson
 
 Modellen er bygget til Premier Manager Efterår 2026. Til et nyt spil skal du rette:
 
 - `GAME_ID` i `hent.py`
-- sæsonerne i `V_SAESON` og `liga_2026()` i `model.py`
-- preseason-tiers i `TIER` og klubkoderne i `H2F`, `UK` og `KLUBBER`, hvis ligaen har nye hold
-- `MAKS_ALDER` i `kvalitet.py`, hvis ligafilens navn ændres
+- sæsonerne: `FM_SAESON` i `hent.py`, `V_SAESON` og sæsonerne `"2024"`-`"2026"` i `model.py` og football-data-sæsonen i `odds_historik()`
+- preseason-tiers i `TIER` og klubkoderne i `H2F`, `UK`, `KODE` og `KLUBBER`, hvis ligaen har nye hold

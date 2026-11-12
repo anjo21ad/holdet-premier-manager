@@ -2,20 +2,20 @@
 """MODEL - holdet.dk Premier Manager, Efteraar 2026. Een fil, tre regler, een pointformel.
 
 Fire kilder, hver med een rolle:
-  holdet    pris, klub, position (autoritet)               holdet-*.json (den nyeste vaelges)
-  understat starter, minutter, xG, xA, roller              us-m-*.json (i aar), us-p-*.json (2024-25)
-  Betfair   holdstyrke (Match Odds + BTTS)                 bf-r<N>-*.json
+  holdet    pris, klub, position (autoritet) og facit       holdet-*.json (den nyeste vaelges)
+  FotMob    starter, minutter, xG, xA, positioner, skud     fm-m-*.json (PL 2024-2026 + fire andre topligaer 2024-2025)
+  odds      holdstyrke (1X2 + over/under 2,5)               od-r<N>.json (Pinnacle; spillede runder fra football-data.co.uk)
   RotoWire  opstilling til naeste runde                    rw-r<N>.json
 Kampprogram og runder fra holdets egen kampplan (holdet-pl-schedule-*.json).
 
 Tre regler:
   1. RATE (Marcel): g90 = (sum v*npxG*90 + K*prior_rolle) / (sum v*min + K) over STARTER i tre saesoner.
      v = 1 / 0,8 / 0,6 efter saeson (5/4/3), x 0,5 for minutter i en anden klub. Samme for a90 med xA.
-     Straffe er et separat led (rettelse 1, 26/10): + ligaens straffe-xG pr. holdkamp x spillerens andel af
+     Straffe er et separat led: + ligaens straffe-xG pr. holdkamp x spillerens andel af
      klubbens straffe-xG (2025 + i aar).
   2. SPILLETID: naeste runde = RotoWire-status; resten = 1/2 status + 1/2 startandel i klubbens
-     seneste 15 kampe med spilleren i klubben, shrunket mod status med 3 kampe (rettelse 2, 26/10).
-  3. HOLDSTYRKE: preseason-tier som prior (vaegt 4 runder), opdateret med Betfair-lambda fra hver gemt runde.
+     seneste 15 kampe med spilleren i klubben, shrunket mod status med 3 kampe.
+  3. HOLDSTYRKE: preseason-tier som prior (vaegt 4 runder), opdateret med markedets lambda fra hver gemt runde.
 Een pointformel (ev_kamp = spillets regler). Dit eget skoen kun via manager_input.json (hoejst ~5 poster).
 Kompleksitetsbudget: ingen ny parameter, kilde eller lag uden maalt forbedring i backtest paa >= 2 runder.
 Begrundelser og evidens: docs/metode.md.
@@ -59,12 +59,21 @@ UK = {"Arsenal": "ARS", "Aston Villa": "AVL", "Bournemouth": "BOU", "Brentford":
       "Sunderland": "SUN", "Tottenham": "TOT"}
 BF = dict(UK, **{"Newcastle": "NEW", "Man City": "MCI", "Man Utd": "MUN", "Man United": "MUN",
                  "Nottm Forest": "NFO", "Spurs": "TOT"})
-def bf_fil(runde):
-    """Rundens Betfair-skabelon ('bf-r<N>-{}.json'), eller None hvis runden ikke er gemt."""
-    skab = "bf-r%d-{}.json" % runde
-    if os.path.exists(os.path.join(SP, skab.format("MATCH_ODDS"))) and os.path.exists(os.path.join(SP, skab.format("BOTH_TEAMS_TO_SCORE"))):
-        return skab
-    return None
+def od_fil(runde):
+    """Rundens oddsfil ('od-r<N>.json'), eller None hvis runden ikke er gemt."""
+    fn = "od-r%d.json" % runde
+    return fn if os.path.exists(os.path.join(SP, fn)) else None
+# FotMob positionId -> positionskode (GK, DC, DL/DR, DMC, MC, AML/AMR/AMC, FW), som ROLLE oversaetter til en rolle. Koden er
+# linje x 10 + side; tabellen er kontrolleret paa 2.450 starter i R1-R8 2026. Koder uden for tabellen gives efter linjen.
+FM_POS = {11: "GK", 32: "DR", 38: "DL", 51: "DR", 59: "DL", 62: "DMR", 68: "DML", 71: "DMR", 79: "DML", 72: "MR", 78: "ML",
+          82: "AMR", 83: "AMR", 87: "AML", 88: "AML", 103: "AMR", 107: "AML"}
+
+
+def fm_pos(pid):
+    if pid in FM_POS:
+        return FM_POS[pid]
+    linje = (pid or 0) // 10
+    return {3: "DC", 5: "DMC", 6: "DMC", 7: "MC", 8: "AMC"}.get(linje, "FW" if linje >= 10 else "MC")
 POS = {269: "defense", 270: "goalkeeper", 271: "midfield", 272: "striker"}
 
 J = lambda f: json.load(io.open(os.path.join(SP, f), encoding="utf-8"))
@@ -92,15 +101,6 @@ def match_score(a, b):
     if len(sa & sb) >= 2:
         return 70
     return 65 if a[-1] == b[-1] and len(a[-1]) >= 4 else 0
-
-
-def us_kort():
-    """({navn(norm): us_id}, {us_id: holdet-position}) fra board.json. Koer 'python model.py' foerst."""
-    fn = os.path.join(SP, "board.json")
-    if not os.path.exists(fn):
-        raise SystemExit("board.json mangler i %s - koer 'python model.py <runde>' foerst" % SP)
-    b = json.load(io.open(fn, encoding="utf-8"))
-    return {norm(r["name"]): str(r["us_id"]) for r in b if r["us_id"]}, {str(r["us_id"]): r["pos"] for r in b if r["us_id"]}
 
 
 # ---------- spillets regler ----------
@@ -161,68 +161,96 @@ def holdet():
     return d
 
 
-def liga_2026():
-    """Den understat-ligafil med flest spillede kampe (et forældet filnavn kan ikke snige sig ind)."""
-    filer = [f for f in glob.glob(os.path.join(SP, "us-*.json")) if re.search(r"us-(0\d{3}|league-2026)\.json$", f)]
-    return max((json.load(io.open(f, encoding="utf-8")) for f in filer), key=lambda d: sum(x["isResult"] for x in d["dates"]))
+FM_LIGAER = ("PL", "L1", "BL", "SA", "LL")
+_HIST = {}
 
 
-def kampe_foer(runde):
-    """Kampe i runder < runde (runde = holdets k'te kamp, som facit_alle.py)."""
-    import facit_alle as FA
-    rd = FA.runder(liga_2026())
-    return [(r, x, FA.kamp(x["id"])) for r in sorted(rd) if r < runde for x in rd[r]]
-
-
-def betfair(runde, fx_par):
-    """{klub: (lambda_for, lambda_imod, pW, pD, hjemme, modstander)} fra rundens Betfair-filer."""
-    sti = bf_fil(runde)
-    if not sti:
-        return {}
-    def laes(fil):
-        ud = {}
-        for et in J(fil).get("eventTypes", []):
-            for e in et.get("eventNodes", []):
-                navn = e.get("event", {}).get("eventName", "?").replace(" - ", " v ")
-                for m in e.get("marketNodes", []):
-                    rr = {}
-                    for run in m.get("runners", []):
-                        ex = run.get("exchange", {})
-                        bk = (ex.get("availableToBack") or [{}])[0].get("price")
-                        ly = (ex.get("availableToLay") or [{}])[0].get("price")
-                        if bk and ly:
-                            rr[run["description"]["runnerName"]] = (1 / bk + 1 / ly) / 2
-                    if rr:
-                        ud[navn] = rr
-        return ud
-    mo, bt = laes(sti.format("MATCH_ODDS")), laes(sti.format("BOTH_TEAMS_TO_SCORE"))
-    ud = {}
-    for k, rr in mo.items():
-        if " v " not in k or k not in bt or "No" not in bt[k]:
-            continue
-        h, a = k.split(" v ")
-        if (BF.get(h), BF.get(a)) not in fx_par:
-            continue
-        s, bs = sum(rr.values()), sum(bt[k].values())
-        lh, la = loes(rr.get(h, 0) / s, bt[k]["No"] / bs)
-        ud[BF[h]] = (lh, la, rr.get(h, 0) / s, rr.get("The Draw", 0) / s, True, BF[a])
-        ud[BF[a]] = (la, lh, rr.get(a, 0) / s, rr.get("The Draw", 0) / s, False, BF[h])
+def fm_kampe(liga, saeson):
+    """[(kampliste-raekke, kompakt kamp)] for ligaens faerdige kampe i cachen (hent.py fotmob)."""
+    fn = os.path.join(SP, "fm-liga-%s-%s.json" % (liga, saeson))
+    if not os.path.exists(fn):
+        return []
+    ud = []
+    for m in J(os.path.basename(fn)):
+        f = os.path.join(SP, "fm-m-%s.json" % m["id"])
+        if m["faerdig"] and os.path.exists(f):
+            ud.append((m, json.load(io.open(f, encoding="utf-8"))))
     return ud
 
 
-def loes(ph, p_ikke_begge):
-    """Poisson-lambdaer der rammer markedets P(hjemmesejr) og P(ikke begge scorer)."""
+def klubkode(navn):
+    from hent import KODE
+    return KODE.get(navn, navn)
+
+
+def kampe_foer(runde):
+    """PL-kampe i aar i runder < runde: [(runde, kamp)]. En kamp hoerer til den runde, hvis deadline ligger foer kampstart."""
+    _, dl = kampplan()
+    closes = [dl[r] for r in sorted(dl)]
+    ud = []
+    for m, k in fm_kampe("PL", "2026"):
+        r = sum(1 for c in closes if c[:16] <= m["tid"][:16])
+        if r < runde:
+            ud.append((r, k))
+    return sorted(ud, key=lambda t: t[1]["tid"])
+
+
+def straffe(k):
+    """{(spiller, kamp): straffe-xG} for een kamp."""
+    ud = collections.defaultdict(float)
+    for s in k["skud"]:
+        if s["sit"] == "Penalty" and not s["selvmaal"]:
+            ud[(s["id"], k["id"])] += s["xg"]
+    return ud
+
+
+def historik():
+    """Raekker for 2024 og 2025 (alle ligaer) pr. FotMob-spiller: (dato, saeson, klub, position, min, npxG, xA, kamp).
+    Statisk, saa den laeses een gang pr. koersel."""
+    if "rk" not in _HIST:
+        rk = collections.defaultdict(list)
+        for saeson in ("2024", "2025"):
+            for liga in FM_LIGAER:
+                for m, k in fm_kampe(liga, saeson):
+                    pen = straffe(k)
+                    for p in k["spillere"]:
+                        if p["min"] > 0:
+                            rk[p["id"]].append((k["tid"], saeson, klubkode(k[p["hold"]]), fm_pos(p["pos"]) if p["start"] else "Sub",
+                                                p["min"], p["xg"] - pen.get((p["id"], k["id"]), 0.0), p["xa"], k["id"]))
+        _HIST["rk"] = rk
+    return _HIST["rk"]
+
+
+def marked(runde, fx_par):
+    """{klub: (lambda_for, lambda_imod, pW, pD, hjemme, modstander)} fra rundens oddsfil."""
+    fn = od_fil(runde)
+    if not fn:
+        return {}
+    ud = {}
+    for k in J(fn)["kampe"]:
+        h, a = k["h"], k["a"]
+        if (h, a) not in fx_par:
+            continue
+        lh, la = loes(k["pH"], k["pOver25"])
+        ud[h] = (lh, la, k["pH"], k["pD"], True, a)
+        ud[a] = (la, lh, k["pA"], k["pD"], False, h)
+    return ud
+
+
+def loes(ph, p_over):
+    """Poisson-lambdaer der rammer markedets P(hjemmesejr) og P(over 2,5 maal). Totalen afhaenger kun af
+    summen af lambdaerne, saa den findes foerst; P(hjemmesejr) fordeler den."""
+    over = lambda T: 1 - math.exp(-T) * (1 + T + T * T / 2)
+    lo, hi = 0.3, 8.0
+    for _ in range(60):
+        T = (lo + hi) / 2
+        lo, hi = (T, hi) if over(T) < p_over else (lo, T)
     pH = lambda lh, la: sum(pois(i, lh) * pois(j, la) for i in range(11) for j in range(11) if i > j)
-    btn = lambda lh, la: math.exp(-la) + math.exp(-lh) - math.exp(-lh - la)
-    lo, hi = 0.6, 5.0
+    a, b = 0.01, T - 0.01
     for _ in range(50):
-        tot = (lo + hi) / 2
-        a, b = 0.05, tot - 0.05
-        for _ in range(50):
-            lh = (a + b) / 2
-            a, b = (lh, b) if pH(lh, tot - lh) < ph else (a, lh)
-        lo, hi = (tot, hi) if btn(lh, tot - lh) > p_ikke_begge else (lo, tot)
-    return lh, tot - lh
+        lh = (a + b) / 2
+        a, b = (lh, b) if pH(lh, T - lh) < ph else (a, lh)
+    return lh, T - lh
 
 
 def rotowire(runde):
@@ -255,98 +283,71 @@ def i_liste(navn, liste):
 
 # ---------- modellen ----------
 def byg(runde, rundeinfo=True):
-    """rundeinfo=False: uden RotoWire og Betfair for selve runden (fair sammenligning med generiske prognoser)."""
+    """rundeinfo=False: uden RotoWire og odds for selve runden (fair sammenligning med generiske prognoser)."""
     H = holdet()
     pers, teams = H["_embedded"]["persons"], H["_embedded"]["teams"]
     plan, _ = kampplan()
     par = lambda r: set(plan.get(r, []))
-    liga, liga25 = liga_2026(), J("us-league-2025.json")
 
-    # 1. understat: aarets starter fra kamprosters (friske), 2024-25 fra spillerfiler (statiske)
+    # 1. FotMob: aarets kampe foer runden (PL), 2024-2025 fra alle fem ligaer (historik())
     kampe = kampe_foer(runde)
-    rk = collections.defaultdict(list)          # us_id -> [(dato, saeson, klub, pos, min, xg, xa)]
-    skud = collections.defaultdict(list)        # us_id -> [(xg, situation)] i aar
+    rk = collections.defaultdict(list)          # fm_id -> [(dato, saeson, klub, pos, min, npxg, xa, kamp)]
+    skud = collections.defaultdict(list)        # fm_id -> [(xg, situation)] i aar
     klubkampe = collections.defaultdict(list)   # klub -> [(dato, kamp_id)] 2025 + 2026
-    # straffe (rettelse 1): rosternes xG er uden straffe; straffe-xG pr. (spiller, kamp), klub og (spiller, klub)
-    PEN_KAMP = collections.defaultdict(float); PEN_KLUB = collections.defaultdict(float); PEN_SP = collections.defaultdict(float)
+    # straffe som separat led: rosternes xG er med straffe, saa straffe-xG traekkes fra pr. (spiller, kamp)
+    PEN_KLUB = collections.defaultdict(float); PEN_SP = collections.defaultdict(float)
     holdkampe = 0
-    for r, x, md in kampe:
-        for side in ("h", "a"):
-            kl = UK[x[side]["title"]]
-            holdkampe += 1
-            for sk_ in md["shots"][side]:
-                if sk_["situation"] == "Penalty":
-                    PEN_KAMP[(sk_["player_id"], x["id"])] += float(sk_["xG"])
-                    PEN_KLUB[kl] += float(sk_["xG"]); PEN_SP[(sk_["player_id"], kl)] += float(sk_["xG"])
-        for side in ("h", "a"):
-            kl = UK[x[side]["title"]]
-            klubkampe[kl].append((x["datetime"], x["id"]))
-            for p in md["rosters"][side].values():
-                if int(p["time"]) > 0:
-                    rk[p["player_id"]].append((x["datetime"], "2026", kl, p["position"], int(p["time"]),
-                                               float(p["xG"]) - PEN_KAMP.get((p["player_id"], x["id"]), 0.0), float(p["xA"]), x["id"]))
-        for s in md["shots"]["h"] + md["shots"]["a"]:
-            skud[s["player_id"]].append((float(s["xG"]), s["situation"]))
-    # 2025: klubbernes straffe-xG fra ligafilen (xG - npxG), spillere med flere klubber taelles under den sidste
-    PEN_KLUB25 = collections.defaultdict(float)
-    for p in liga25["players"]:
-        kl = UK.get(p["team_title"].split(",")[-1].strip())
-        if kl:
-            PEN_KLUB25[kl] += float(p["xG"]) - float(p["npxG"])
-    PEN_PR_HOLDKAMP = (sum(PEN_KLUB25.values()) + sum(PEN_KLUB.values())) / (760 + holdkampe)
-    for x in liga25["dates"]:
-        if x["isResult"]:
-            for side in ("h", "a"):
-                if x[side]["title"] in UK:
-                    klubkampe[UK[x[side]["title"]]].append((x["datetime"], x["id"]))
-
-    # 2. holdet -> understat (2026-ligaen pr. klub; 2025-ligaen for spillere uden minutter i aar)
-    idx = collections.defaultdict(list)
-    for L in (liga, liga25):
-        for p in L["players"]:
-            kl = UK.get(p["team_title"].split(",")[-1].strip())
+    for r, k in kampe:
+        pen = straffe(k)
+        for (pid, _), xg in pen.items():
+            kl = klubkode(k[next(p["hold"] for p in k["spillere"] if p["id"] == pid)]) if any(p["id"] == pid for p in k["spillere"]) else None
             if kl:
-                idx[kl].append((p["id"], toks(p["player_name"])))
+                PEN_KLUB[kl] += xg; PEN_SP[(pid, kl)] += xg
+        for side in ("h", "a"):
+            holdkampe += 1
+            klubkampe[klubkode(k[side])].append((k["tid"], k["id"]))
+        for p in k["spillere"]:
+            if p["min"] > 0:
+                rk[p["id"]].append((k["tid"], "2026", klubkode(k[p["hold"]]), fm_pos(p["pos"]) if p["start"] else "Sub", p["min"],
+                                    p["xg"] - pen.get((p["id"], k["id"]), 0.0), p["xa"], k["id"]))
+        for s in k["skud"]:
+            if not s["selvmaal"]:
+                skud[s["id"]].append((s["xg"], s["sit"]))
+    # 2025: klubbernes og spillernes straffe-xG og klubkampe fra sidste saesons PL-kampe
+    PEN_KLUB25 = collections.defaultdict(float); PEN_SP25 = collections.defaultdict(float)
+    kampe25 = fm_kampe("PL", "2025")
+    for m, k in kampe25:
+        hold_af = {p["id"]: klubkode(k[p["hold"]]) for p in k["spillere"]}
+        for (pid, _), xg in straffe(k).items():
+            if pid in hold_af:
+                PEN_KLUB25[hold_af[pid]] += xg; PEN_SP25[(pid, hold_af[pid])] += xg
+        for side in ("h", "a"):
+            klubkampe[klubkode(k[side])].append((k["tid"], k["id"]))
+    PEN_PR_HOLDKAMP = (sum(PEN_KLUB25.values()) + sum(PEN_KLUB.values())) / (2 * len(kampe25) + holdkampe)
+
+    # 2. holdet -> FotMob: spillere med minutter for klubben i aar eller i PL sidste saeson; ellers et entydigt navn
+    hist = historik()
+    idx = collections.defaultdict(dict)
+    for _, k in kampe + [(None, k) for _, k in kampe25]:
+        for p in k["spillere"]:
+            idx[klubkode(k[p["hold"]])][p["id"]] = toks(p["navn"] or "")
     aktive = [it for it in H["items"] if not it.get("isOut")]
     navn = lambda it: ((pers[str(it["personId"])].get("firstName") or "") + " " + (pers[str(it["personId"])].get("lastName") or "")).strip()
     klub = lambda it: H2F[teams[str(it["teamId"])]["abbreviation"]]
     tildel = collections.defaultdict(list)
     for it in aktive:
-        sc = sorted(((match_score(toks(navn(it)), t), pid) for pid, t in idx[klub(it)]), reverse=True)
+        sc = sorted(((match_score(toks(navn(it)), t), pid) for pid, t in idx[klub(it)].items()), reverse=True)
         if sc and sc[0][0] >= 65 and not (len(sc) > 1 and sc[1][0] == sc[0][0] and sc[1][1] != sc[0][1]):
             tildel[sc[0][1]].append((sc[0][0], it["personId"]))
-    us_af = {lst[0][1]: pid for pid, lst in ((p, sorted(l, reverse=True)) for p, l in tildel.items())
+    fm_af = {lst[0][1]: pid for pid, lst in ((p, sorted(l, reverse=True)) for p, l in tildel.items())
              if not (len(lst) > 1 and lst[0][0] == lst[1][0])}
 
     # 3. raa rater pr. spiller (starter, vaegtet) -> rolle -> rollepriorer fra data
-    import hent as U
-    PEN_SP25 = collections.defaultdict(float)
     def raekker(pid, kl):
-        ud = list(rk.get(pid, []))
-        fn = os.path.join(SP, "us-p-%s.json" % pid)
-        if not os.path.exists(fn):
-            try:
-                U.spiller(pid, max_timer=1e9)       # ny spiller: hent karrieren een gang
-            except Exception as e:
-                print("  !! understat-spillerfil %s kunne ikke hentes: %r" % (pid, e))
-        if os.path.exists(fn):
-            d = json.load(io.open(fn, encoding="utf-8"))
-            hold = U.hold_pr_saeson(d)
-            pen_m = collections.defaultdict(float)
-            for sk_ in d["shots"]:
-                if sk_["situation"] == "Penalty" and sk_["season"] in ("2025", "2024"):
-                    pen_m[str(sk_["match_id"])] += float(sk_["xG"])
-                    if sk_["season"] == "2025":
-                        PEN_SP25[(pid, UK.get(sk_["h_team"] if sk_["h_a"] == "h" else sk_["a_team"]))] += float(sk_["xG"])
-            for m in d["matches"]:
-                if m["season"] in ("2025", "2024"):
-                    egen = U.egen_og_modstander(m, hold)[0]
-                    ud.append((m["date"], m["season"], UK.get(egen, egen), m["position"], int(m["time"]),
-                               float(m["xG"]) - pen_m.get(str(m["id"]), 0.0), float(m["xA"]), m["id"]))
-        return ud
+        return list(rk.get(pid, [])) + list(hist.get(pid, []))
     spillere = {}
     for it in aktive:
-        pid, kl = us_af.get(it["personId"]), klub(it)
+        pid, kl = fm_af.get(it["personId"]), klub(it)
         rows = raekker(pid, kl) if pid else []
         st = [x for x in rows if x[3] != "Sub"]
         v = lambda x: V_SAESON[x[1]] * (1.0 if x[2] == kl else V_ANDEN_KLUB)
@@ -371,14 +372,14 @@ def byg(runde, rundeinfo=True):
     a0 = {c: tg[c] / S.mean(tg.values()) for c in TIER}
     d0 = {c: -math.log(TIER[c][2]) / lam_l for c in TIER}
     obs_a, obs_d = collections.defaultdict(list), collections.defaultdict(list)
-    marked = {}
+    naeste_mk = {}
     for r in range(1, runde + 1):
         if r == runde and not rundeinfo:
             continue
-        bf = betfair(r, par(r))
+        mk = marked(r, par(r))
         if r == runde:
-            marked = bf
-        for c, (lf, lm, _, _, hj, mod) in bf.items():
+            naeste_mk = mk
+        for c, (lf, lm, _, _, hj, mod) in mk.items():
             h = HA if hj else 1 / HA
             obs_a[c].append(lf / (lam_l * d0[mod] * h))
             obs_d[c].append(lm / (lam_l * a0[mod] / h))
@@ -390,7 +391,7 @@ def byg(runde, rundeinfo=True):
             for c, hj, m in ((h, True, a), (a, False, h)):
                 lf, lm = lam(c, m, hj), lam(m, c, not hj)
                 prog[c].append((lf, lm) + resultat(lf, lm) + (hj,))
-    naeste = {c: marked[c] if c in marked else None for c in TIER}
+    naeste = {c: naeste_mk[c] if c in naeste_mk else None for c in TIER}
     for h, a in plan.get(runde, []):
             for c, hj, m in ((h, True, a), (a, False, h)):
                 if naeste[c] is None:
@@ -413,7 +414,7 @@ def byg(runde, rundeinfo=True):
             man = {}
         rolle = man.get("rolle", s["rolle"])
         pg, pa = prior.get(rolle, (0.0, 0.0))
-        # rettelse 1 (26/10): npxG-rate + ligaens straffe-xG pr. holdkamp x spillerens andel af klubbens straffe
+        # npxG-rate + ligaens straffe-xG pr. holdkamp x spillerens andel af klubbens straffe
         # (2025 + i aar, kun nuvaerende klub). Backtest R4-R8: MSE 3.148 -> 3.140, beta 0,83 -> 0,85, top 5 % 84 -> 89 %.
         klub_pen = PEN_KLUB25.get(kl, 0.0) + PEN_KLUB.get(kl, 0.0)
         andel_pen = min(1.0, (PEN_SP25.get((s["pid"], kl), 0.0) + PEN_SP.get((s["pid"], kl), 0.0)) / klub_pen) if klub_pen > 0 else 0.0
@@ -432,14 +433,14 @@ def byg(runde, rundeinfo=True):
         else:   # ingen RotoWire for klubben (kun i backtest; live kraever kvalitet.py alle 20): startandel shrunket mod 0,14
             status = (n_st + 2 * PS["ANDET"]) / (len(km) + 2)
         ps_n = status
-        # rettelse 2 (26/10): startandelen shrinkes mod status med 3 kampe i stedet for et hop ved 5 klubkampe.
+        # startandelen shrinkes mod status med 3 kampe i stedet for et hop ved 5 klubkampe.
         # Brier for starter efter naeste runde: R4 0,1989 -> 0,1964, R5 0,1855 -> 0,1804, R6 0,1868 -> 0,1862.
         pstart = 0.5 * status + 0.5 * (n_st + SHRINK_START * status) / (len(km) + SHRINK_START)
         if "pStart" in man:
             pstart = man["pStart"]
         egne_st = [x for x in s["st"] if x[2] == kl]
         r = {"name": nm, "club": kl, "pos": pos, "price": it["price"] / 1e6, "startPrice": it["startPrice"] / 1e6,
-             "us_id": s["pid"], "rolle": rolle, "g90": g90, "a90": a90, "pS_neste": ps_n, "pStart": pstart,
+             "fm_id": s["pid"], "person_id": s["it"]["personId"], "rolle": rolle, "g90": g90, "a90": a90, "pS_neste": ps_n, "pStart": pstart,
              "bt": (sum(min(x[4], 90) for x in egne_st) / 90 + SHRINK_START * norm_bt.get(rolle, 0.88)) / (len(egne_st) + SHRINK_START),
              "f60": (sum(1 for x in egne_st if x[4] >= 60) + SHRINK_START * norm_60.get(rolle, 0.9)) / (len(egne_st) + SHRINK_START)}
         evaluer(r, ctx)
@@ -470,7 +471,7 @@ def byg(runde, rundeinfo=True):
                            "status": round(status, 2), "startandel": None if andel is None else round(andel, 2),
                            "klubkampe": len(km), "flag": flag}
         board.append(r)
-    return board, {"runde": runde, "prior": prior, "att": att, "def": dfn, "marked_runder": [r for r in range(1, runde + 1) if bf_fil(r)],
+    return board, {"runde": runde, "prior": prior, "att": att, "def": dfn, "marked_runder": [r for r in range(1, runde + 1) if od_fil(r)],
                    "matchet": sum(1 for s in spillere.values() if s["pid"]), "aktive": len(spillere), "ctx": ctx,
                    "holdet_fil": H["_fil"]}
 
@@ -481,5 +482,5 @@ if __name__ == "__main__":
     runde = int(sys.argv[1])
     board, meta = byg(runde)
     json.dump(board, io.open(os.path.join(SP, "board.json"), "w", encoding="utf-8"), ensure_ascii=False)
-    print("R%d: %d spillere, %d matchet mod understat, markedsrunder %s" % (runde, meta["aktive"], meta["matchet"], meta["marked_runder"]))
+    print("R%d: %d spillere, %d matchet mod FotMob, markedsrunder %s" % (runde, meta["aktive"], meta["matchet"], meta["marked_runder"]))
     print("rollepriorer (g90, a90):", {k: (round(v[0], 3), round(v[1], 3)) for k, v in sorted(meta["prior"].items())})

@@ -87,12 +87,20 @@ def _():
     assert abs(pw2 - (1 - pw2 - pd2)) < 1e-5, (pw2, pd2)
 
 
+@test("positioner: FotMobs positionId oversaettes til roller efter linje og side")
+def _():
+    forvent = {11: "GK", 32: "FB", 34: "CB", 38: "FB", 64: "CM", 75: "CM", 83: "AM", 85: "AM", 105: "FW", 115: "FW"}
+    faktisk = {p: M.ROLLE[M.fm_pos(p)] for p in forvent}
+    assert faktisk == forvent, faktisk
+
+
 @test("markedet -> lambda: loes() genfinder de lambdaer, der skabte priserne")
 def _():
     lh, la = 1.6, 1.1
     ph = M.resultat(lh, la, N=11)[0]
-    ikke_begge = math.exp(-la) + math.exp(-lh) - math.exp(-lh - la)
-    l1, l2 = M.loes(ph, ikke_begge)
+    T = lh + la
+    over = 1 - math.exp(-T) * (1 + T + T * T / 2)
+    l1, l2 = M.loes(ph, over)
     assert abs(l1 - lh) < 0.02 and abs(l2 - la) < 0.02, (l1, l2)
 
 
@@ -190,7 +198,7 @@ def i_tmp(indhold):
     return d
 
 
-@test("port: understat-404 (461 bytes HTML) stopper")
+@test("port: en kort HTML-side (fx en 404) stopper")
 def _():
     d = i_tmp(b"<!DOCTYPE html>" + b" " * 446)
     try:
@@ -210,64 +218,75 @@ def _():
         KV.SP = M.SP; shutil.rmtree(d)
 
 
-def bf_json(markedstype, runnere):
-    ev = [{"event": {"eventName": "Hold%d v Hold%d" % (i, i + 10)},
-           "marketNodes": [{"description": {"marketType": markedstype},
-                            "runners": [{"description": {"runnerName": n}} for n in runnere]}]} for i in range(10)]
-    return {"eventTypes": [{"eventNodes": ev}]}
+def od(kampe):
+    return {"runde": 8, "kilde": "test", "kampe": [{"h": h, "a": a, "pH": 0.5, "pD": 0.25, "pA": 0.25, "pOver25": 0.55} for h, a in kampe]}
 
 
-@test("port: Match Odds i BTTS-filen stopper; en korrekt BTTS-fil passerer")
+PAR = {("AAA", "BBB"), ("CCC", "DDD")}
+
+
+@test("port: en oddsfil med alle rundens kampe og plausible sandsynligheder passerer")
 def _():
     KV.stop[:] = []
-    KV.betfair_port("bf-r8-BOTH_TEAMS_TO_SCORE.json", bf_json("MATCH_ODDS", ["Hold1", "Hold11", "The Draw"]))
-    assert any("markedstyperne" in s for s in KV.stop), KV.stop
-    KV.stop[:] = []
-    KV.betfair_port("bf-r8-BOTH_TEAMS_TO_SCORE.json", bf_json("BOTH_TEAMS_TO_SCORE", ["Yes", "No"]))
+    KV.odds_port("od-r8.json", od(PAR), PAR)
     assert not KV.stop, KV.stop
 
 
-@test("port: Betfair hentet paa dansk stopper")
+@test("port: en oddsfil, der mangler en kamp eller har uplausible sandsynligheder, stopper")
 def _():
     KV.stop[:] = []
-    KV.betfair_port("bf-r8-MATCH_ODDS.json", bf_json("MATCH_ODDS", ["Hold1", "Hold11", "Uafgjort"]))
-    assert any("locale" in s for s in KV.stop), KV.stop
+    KV.odds_port("od-r8.json", od([("AAA", "BBB")]), PAR)
+    assert any("mangler kampe" in s for s in KV.stop), KV.stop
+    KV.stop[:] = []
+    d = od(PAR); d["kampe"][0]["pH"] = 0.9
+    KV.odds_port("od-r8.json", d, PAR)
+    assert any("uplausible" in s for s in KV.stop), KV.stop
 
 
-# ---------- pointmotoren (facit) ----------
-def rost(pid, navn, tid, position, maal=0, roster_in="0"):
-    return {"player_id": pid, "player": navn, "time": str(tid), "position": position, "roster_in": roster_in,
-            "red_card": "0", "yellow_card": "0", "goals": str(maal), "assists": "0", "own_goals": "0"}
+# ---------- facit fra holdets priser ----------
+def holdet_fil(d, ddmm, priser):
+    json.dump({"items": [{"personId": p, "price": v, "startPrice": 4000000} for p, v in priser.items()], "_embedded": {"persons": {}}},
+              io.open(os.path.join(d, "holdet-%s.json" % ddmm), "w", encoding="utf-8"))
 
 
-def skud(pid, minut, side, result="SavedShot"):
-    return {"player_id": pid, "minute": str(minut), "h_a": side, "result": result, "situation": "OpenPlay"}
+def kampplan_fil(d):
+    runder = [{"close": "2026-08-21T19:00:00Z", "end": "2026-08-25T10:00:00Z"}, {"close": "2026-08-28T19:00:00Z", "end": "2026-09-01T10:00:00Z"},
+              {"close": "2026-09-04T19:00:00Z", "end": "2026-09-07T10:00:00Z"}]
+    json.dump({"rounds": runder, "events": []}, io.open(os.path.join(d, "holdet-pl-schedule.json"), "w", encoding="utf-8"))
 
 
-# udekamp 0-1: forsvareren (1) scorer i 30. minut, hjemmekeeperen (2) redder tre skud,
-# indskiftet angriber (3) og indskiftet forsvarer (4) kommer paa i 70. minut
-KAMP = {"rosters": {"h": {"a": rost("2", "Keeper Hjemme", 90, "GK")},
-                    "a": {"a": rost("1", "Back Ude", 90, "DC", maal=1), "b": rost("3", "Sub Angriber", 20, "Sub"),
-                          "c": rost("4", "Sub Back", 20, "Sub")}},
-        "shots": {"h": [], "a": [skud("1", 30, "a", "Goal")] + [skud("9", m, "a") for m in (10, 50, 80)]}}
-POS = {"1": "defense", "2": "goalkeeper", "3": "striker", "4": "defense"}
-FACIT = FA.point_kamp({"goals": {"h": "0", "a": "1"}}, KAMP, lambda pid, navn: POS[pid])
-
-
-@test("facit: sejrsmaal af udeforsvarer = 7+25+10+10+175+40+50 = 317")
+@test("facit: point = prisdelta mellem snapshots efter hver runde; en runde uden snapshot faar intet facit")
 def _():
-    assert FACIT["1"]["point"] == 317, FACIT["1"]["komp"]
+    d = tempfile.mkdtemp()
+    gl = (FA.SP, FA.VAULT)
+    try:
+        kampplan_fil(d)
+        holdet_fil(d, "2608", {1: 4100000, 2: 3995000})     # efter R1 (slut 25/8, foer R2's deadline 28/8)
+        holdet_fil(d, "0209", {1: 4317000, 2: 3995000})     # efter R2
+        FA.SP, FA.VAULT = d, d
+        f = FA.byg()
+        assert f["runder"]["1"] == {"1": 100, "2": -5}, f["runder"]["1"]
+        assert f["runder"]["2"] == {"1": 217, "2": 0}, f["runder"]["2"]
+        assert "3" not in f["runder"], f["runder"].keys()
+    finally:
+        FA.SP, FA.VAULT = gl
+        shutil.rmtree(d)
 
 
-@test("facit: hjemmekeeper med tre redninger i et 0-1-nederlag = 7-8-5-8+15 = 1")
+@test("port: en holdet-fil hentet foer seneste runde sluttede stopper")
 def _():
-    assert FACIT["2"]["point"] == 1, FACIT["2"]["komp"]
-
-
-@test("facit: clean sheet kraever 60 minutter, og holdmaal kun mens spilleren er paa banen")
-def _():
-    assert FACIT["4"]["point"] == 42 and "clean sheet" not in FACIT["4"]["komp"], FACIT["4"]["komp"]
-    assert FACIT["3"]["point"] == 42 and "holdmaal" not in FACIT["3"]["komp"], FACIT["3"]["komp"]
+    d = tempfile.mkdtemp()
+    gl = M.SP
+    try:
+        kampplan_fil(d)
+        M.SP, KV.stop[:] = d, []
+        KV.holdet_port(3, {"holdet_fil": "holdet-0209.json"})     # efter R2 sluttede 1/9: frisk
+        assert not KV.stop, KV.stop
+        KV.holdet_port(3, {"holdet_fil": "holdet-2608.json"})     # mangler R2's point
+        assert any("hentet foer R2 sluttede" in s for s in KV.stop), KV.stop
+    finally:
+        M.SP = gl
+        shutil.rmtree(d)
 
 
 # ---------- praeregistrering ----------

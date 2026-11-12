@@ -2,7 +2,7 @@
 
 I Premier Manager er point det samme som prisændring. Når en spiller scorer, stiger hans pris, og dit hold bliver mere værd. Det er hele spillet: få holdets samlede værdi til at vokse.
 
-Tallene herunder er regelsæt 119 (Efterår 2026), kontrolleret mod hele feltets prisændringer i de første runder. `facit_alle.py` regner reglerne ud fra understat-data og rammer holdets egne tal kroneeksakt for 90-97 % af spillerne.
+Tallene herunder er regelsæt 119 (Efterår 2026), kontrolleret mod hele feltets prisændringer i de første runder: regnet ud fra kampdata rammer de holdets egne tal kroneeksakt for 90-97 % af spillerne. Modellen bruger dem i `ev_kamp()`. Facit tager `facit_alle.py` direkte fra holdets priser.
 
 ## Hændelser
 
@@ -53,6 +53,6 @@ Tallene herunder er regelsæt 119 (Efterår 2026), kontrolleret mod hele feltets
 ## Hvad det betyder for modellen
 
 - Målscorere dominerer, og mål på favorithold bærer ekstra, fordi en del af dem bliver sejrsmål.
-- Holdmål og modstandermål (+10 / −8 pr. mål) spreder topklubbernes spillere fra bundklubbernes. Det er grunden til, at holdstyrken fra Betfair vejer tungt.
+- Holdmål og modstandermål (+10 / −8 pr. mål) spreder topklubbernes spillere fra bundklubbernes. Det er grunden til, at holdstyrken fra markedets odds vejer tungt.
 - Clean sheet og redninger gør målmanden til en forsvarsspiller med eget regnestykke. `ev_kamp` regner clean sheet som e<sup>−λ<sub>imod</sub></sup>.
 - Gebyret og den tabte rente gør, at hver handel skal tjene sig hjem. Mod slutningen af sæsonen er der færre runder at gøre det på.

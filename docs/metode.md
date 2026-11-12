@@ -20,12 +20,13 @@ Derfor blev hele kæden erstattet af én fil med tre regler, hver begrundet i fo
 g90 = (Σ v · npxG · 90 + K · prior_rolle) / (Σ v · minutter + K) + straffeled
 ```
 
+- **Data:** starter, minutter, xG og xA pr. kamp fra FotMob, i Premier League og de fire andre store ligaer (Ligue 1, Bundesliga, Serie A og La Liga). Straffe skilles fra med skudkortet.
 - Kun **starter** tæller. Indskiftninger mod trætte forsvar giver en skæv rate.
 - **v** = 1,0 / 0,8 / 0,6 for indeværende og de to forrige sæsoner (Marcels 5/4/3).
 - Minutter for **en anden klub** tæller halvt. xG pr. 90 minutter persisterer omkring 0,6 fra sæson til sæson, men kun omkring 0,4 efter et klubskifte.
 - **K = 1.000 minutter**, omtrent 11 kampe. Under ti kampe er xG for ustabilt til at stå alene.
 - **Prioren** er medianen for spillerens rolle (CB, FB, CM, AM, FW), udledt af data hver gang modellen kører. Rollen er den position, spilleren har startet flest minutter på.
-- **Straffe** er et separat led. Raten bygger på xG uden straffe (npxG), og bagefter lægges ligaens straffe-xG pr. holdkamp (0,079) gange spillerens andel af klubbens straffe-xG i sidste og denne sæson til.
+- **Straffe** er et separat led. Raten bygger på xG uden straffe (npxG), og bagefter lægges ligaens straffe-xG pr. holdkamp (0,093) gange spillerens andel af klubbens straffe-xG i sidste og denne sæson til.
 - Samme regel giver a90 med xA, uden straffeled.
 
 En spiller med 500 vægtede minutter hviler altså 2/3 på prioren. Det er meningen.
@@ -41,7 +42,7 @@ Uden RotoWire for en klub bruges startandelen, trukket mod 0,14 med to kampe. St
 
 ### 3. Holdstyrke
 
-Hver klub starter med en preseason-tier for angreb og forsvar, som vejer som 4 runders markedsdata. For hver runde, hvor Betfair-priserne er gemt, findes de to Poisson-λ, der netop rammer markedets P(hjemmesejr) og P(ikke begge scorer) (`loes()`). Klubbens angrebs- og forsvarsfaktor opdateres med dem.
+Hver klub starter med en preseason-tier for angreb og forsvar, som vejer som 4 runders markedsdata. For hver runde, hvor oddsene er gemt, findes de to Poisson-λ, der rammer markedets P(hjemmesejr) og P(over 2,5 mål) (`loes()`): totalen afhænger kun af summen af λ'erne og findes af P(over 2,5), og P(hjemmesejr) fordeler den. Oddsene for næste runde kommer fra Pinnacle, og for spillede runder fra football-data.co.uk's arkiv (gennemsnit før kampen). Klubbens angrebs- og forsvarsfaktor opdateres med dem.
 
 Markedet justerer selv for modstander, hjemmebane, skader og keepere. Derfor er der ingen håndlavede lag for de ting.
 
@@ -82,68 +83,32 @@ Regler, som koden ikke selv håndhæver:
 - **Regn altid netto af kapitalomkostningen.** En opgradering, der binder 1M ekstra i 13 runder, koster 130.000 i tabt rente.
 - **En skadet spiller regnes med genkøb.** En midlertidig afløser og et genkøb koster to gebyrer, men brudpunktet er typisk omkring to runder. Hold banken klar til genkøbet.
 
-## Datakilderne i november 2026
-
-To af de fire kilder svigter:
-
-- **understat** har været nede siden 2. november og svarer kun med en vedligeholdelsesside.
-- **Betfair** lukker for danske kunder 18. november. Om de offentlige priser stadig kan hentes fra en dansk IP bagefter, er uvist.
-
-Erstatningerne er testet mod de gamle kilder, men endnu ikke bygget ind:
-
-| Kilde | Erstatter | Testet |
-|---|---|---|
-| Pinnacle (åbent guest-API) | Betfair: 1X2, totaler og holdtotaler | 1X2 for runde 11 lå i gennemsnit 0,5 procentpoint fra Betfair, højst 1,3, over ni kampe |
-| FotMob | understat: skudkort med xG og situation pr. skud, opstillinger | Skudniveauet gør det muligt at skille straffe fra og køre koncentrationstesten som før |
-| FPL (officielt API) | understat: xG, xA, minutter og starter pr. kamp | Korrelation 0,977 med understats xG i runde 1-8 over 183 spillere. FPL bruger Opta-skalaen, som ligger lavere: xG skal ganges med 1,107 og xA med 1,27 |
-| holdet.dk | understat som facit | Point er prisændring, så holdets egne priser er facit |
-
-En ny kilde er også en ny parameter, så den følger kompleksitetsbudgettet: den tages først ind, når backtesten på runde 4-8 ikke bliver dårligere med den. Indtil da regnes runderne på understat-data til og med runde 8. Runde 9 og frem lægges ind fra FPL som et tjek ved siden af modellen, og `kvalitet.py` stopper med vilje.
-
-Tjekket 11. november: en fuld optimering med og uden runde 9-10 fra FPL gav samme konklusion, ingen robust handel, og flyttede spillernes forventning med højst ca. 40.000 kr.
-
 ## Evidens
 
-Facit kommer fra understat og er valideret mod holdets egne point: 90-97 % af spillerne rammes kroneeksakt i de første tre runder. Mens understat er nede, er facit holdets egne prisændringer.
+Facit er holdet.dk's egne prisændringer: point er pris, så det er præcist. For runde 1-5, hvor der ikke findes priser fra hver runde, er point regnet ud fra kampdata med spillets regler; hvor det kan kontrolleres, rammer det holdets egne tal på kronen for 90-97 % af spillerne.
 
-**Backtest på R4-R5.** Den første, lagdelte models prognoser efter R3 mod realiserede point i R4-R5, og den nuværende model regnet bagefter på de samme 824 spiller-runder (`kalibrering_alle.py --sammenlign`, genberegnet 23/10 på det opdaterede facit):
+**Backtest på runde 4-10.** Hver runde er regnet med de data, modellen ville have haft før deadline: kampe, odds og opstillinger fra før deadline (`kalibrering_alle.py --backtest`, 3.551 spiller-runder):
 
-| | MSE | β alle | β < 5 | β 5-15 | β ≥ 15 | top 5 % leveret |
-|---|---:|---:|---:|---:|---:|---:|
-| Første model | 3.436 | 0,78 | **0,37** | 0,64 | 1,16 | 97 % |
-| Nuværende, uden RotoWire og Betfair for runden | 3.439 | 0,88 | 0,99 | 0,32 | 1,05 | 98 % |
-| Nuværende, fuld | **3.200** | 0,84 | 0,95 | 0,31 | 0,95 | 89 % |
+| | n | MSE | β (SE) |
+|---|---:|---:|---:|
+| Alle | 3.551 | 2.794 | **0,94** (0,04) |
+| Under 5 kampes evidens | 1.182 | 1.015 | 1,00 (0,08) |
+| 5-15 kampe | 768 | 2.781 | **0,62** (0,09) |
+| Over 15 kampe | 1.601 | 4.113 | 0,94 (0,06) |
 
-I den første model var forskellene for spillere med under 5 kampe mest støj (β 0,37). Shrinkagen rettede det i backtesten. Den samlede fejl faldt 7 %, og hele faldet kom fra RotoWire og Betfair for runden.
+Top-testen pr. runde: de 5 % højest rangerede leverede 111 % af det lovede, top 10 % 103 % og top 25 % 99 %. Samlet ligger hældningen inden for de 25 %, som kontrollen "forskel −25 %" dækker. Pr. runde svinger den fra 0,43 (R5) til 1,17 (R7), så den læses samlet og med standardfejl.
 
-**Præregistrerede runder.** Den nuværende models prognoser låst med `praeregistrer.py` før deadline (`exante/r6-ny2.json`, `exante/r7.json`). Modellen blev rettet én gang mellem de to runder.
-
-| | n | β alle | β < 5 | β 5-15 | β ≥ 15 | top 5 % leveret |
-|---|---:|---:|---:|---:|---:|---:|
-| R6 | 472 | 0,74 | 1,28 | 0,31 | 0,81 | 72 % |
-| R7 | 472 | 1,03 | 0,36 | 0,94 | 1,08 | 100 % |
-| R6 og R7 samlet | 944 | **0,90** (SE 0,07) | 0,85 (0,18) | **0,62** (0,16) | 0,96 (0,09) | 86 % |
-
-Samlet ligger hældningen inden for de 25 %, som kontrollen "forskel −25 %" dækker. De enkelte evidensgrupper svinger meget fra runde til runde, så de læses samlet og med standardfejl.
-
-**Senere runder.** R8 (`exante/r8.json`, 472 spiller-runder) gav β 0,66 (SE 0,08), og de 5 % højest rangerede leverede kun 57 % af det lovede. R9 blev ikke præregistreret. R10 (`exante/r10.json`, 477 spiller-runder) gav β 0,84 (SE 0,09), og toppen leverede 112 %. R10 er målt mod holdets egne prisændringer og regnet på understat-data til og med R8, fordi understat var nede.
+**Præregistrerede runder.** Prognoserne låses med `praeregistrer.py` før hver deadline og måles mod facit med `kalibrering_alle.py`, efterhånden som runderne bliver spillet.
 
 **Handler væk fra raske startere** leverer kun omkring halvdelen. I en backtest på R4-R8 leverede handler, der holdt i alle seks kontroller, 50 % af det forudsagte, når den solgte spiller var en rask starter, og 93 %, når han var usikker. Det er ikke gjort til en regel, men en handel væk fra en rask starter skal have god margin.
 
-**Vagtpunktet** er spillere med 5-15 kampes evidens: β 0,31 i backtesten og 0,62 samlet uden for stikprøven. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
+**Vagtpunktet** er spillere med 5-15 kampes evidens: β 0,62, så forskellene i den gruppe er ca. 1,6 gange så store, som de burde være. Kontrollen "forskel −25 %" dækker kun en del af det. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
 
 **Afvist efter kompleksitetsbudgettet,** fordi de ikke gav en målbar forskel: en prisprior pr. rolle og prisinterval samt spilletidsvinduer på 5, 8 og 10 kampe (Brier 0,207-0,209).
 
 **Taget ind,** fordi det var en fejl og ikke en tuning: startandel som reserve, når RotoWire mangler for en klub (Brier fra 0,209 til 0,178).
 
-**Taget ind 26/10 efter backtest på R4-R8** (`kalibrering_alle.py --backtest`, 2.385 spiller-runder):
-
-| | MSE | β (SE) | β 5-15 | top 5 % leveret |
-|---|---:|---:|---:|---:|
-| Før | 3.148 | 0,83 (0,04) | 0,61 | 84 % |
-| Med straffe som separat led | **3.140** | **0,85** (0,04) | 0,62 | **89 %** |
-
-Straffeleddet var bedre i fire af fem runder og uændret i R4. Startandelen trukket mod status med tre kampe gav Brier 0,1924 → 0,1894 for starter i R6-R8 og 0,2256 → 0,2150 for spillere med under 5 klubkampe. Ingen af rettelserne tilføjer en ny parameter: straffefrekvensen og andelene udledes af data, og de tre kampe er den samme shrinkage som for minutter pr. start.
+**Taget ind efter backtest på R4-R8:** straffe som et separat led (fejlen faldt i fire af fem runder og var uændret i den femte) og startandelen trukket mod status med tre kampe (Brier for starter 0,1924 → 0,1894, og 0,2256 → 0,2150 for spillere med under 5 klubkampe). Ingen af dem tilføjer en ny parameter: straffefrekvensen og andelene udledes af data, og de tre kampe er den samme shrinkage som for minutter pr. start.
 
 ## Metoderegler for skøn
 
@@ -163,7 +128,8 @@ Straffeleddet var bedre i fire af fem runder og uændret i R4. Startandelen truk
 - **Kaptajnbonussen** er mindst 0, fordi et fald ikke trækkes fra. Modellen regner kaptajnens forventning uden den bund, så den er lidt for lav.
 - **Klubskifte** halverer i dag vægten af gamle minutter, men sænker ikke niveauet. Data tyder på, at (npxG+xA)/90 falder ~15 % sæsonen efter et skifte.
 - **Bankrenten** regnes lineært. Ved store kontantbeholdninger er renters rente værd at regne med.
-- **Betfair** prissætter kun én runde pålideligt frem. Resten af sæsonen regnes på holdstyrken. Betfair lukker for danske kunder 18. november 2026, se [Datakilderne i november 2026](#datakilderne-i-november-2026).
+- **Oddsene** prissætter kun én runde pålideligt frem. Resten af sæsonen regnes på holdstyrken.
+- **Spillere fra andre ligaer** end de fem store hviler på rolleprioren.
 
 Hver ændring tages kun ind, hvis den forbedrer kalibreringen på mindst to runder.
 

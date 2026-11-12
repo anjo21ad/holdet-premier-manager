@@ -11,8 +11,7 @@ ikke kun dit eget hold, og opdelt efter hvor meget evidens prognosen hvilede paa
 
 Prognoser:  exante/r<N>[-<maerke>].json (praeregistrer.py) - medtages naar facit for runden findes.
             En variant praeregistreret som fx r7-straffe.json maales side om side med r7.json.
-Facit:      facit/understat.json (facit_alle.py)
-Ikke-spillende spillere faar -5 (baenk). holdet giver 0 ved 'ikke i truppen' - lille skaevhed.
+Facit:      facit/holdet.json (facit_alle.py): holdets prisdelta pr. runde og spiller
 
 Brug:  python kalibrering_alle.py                 alle praeregistreringer mod facit
        python kalibrering_alle.py --backtest      model.py as-of R4 til seneste runde (grundlaget for modelrettelser)
@@ -36,56 +35,53 @@ def ols(xs, ys):
     return a, b, se
 
 
-def maal(par):
-    """par: [(prognose, realiseret)] -> (n, MSE, bias, beta, SE)."""
-    xs, ys = [p for p, _ in par], [r for _, r in par]
-    a, b, se = ols(xs, ys)
-    return len(par), S.mean((r - p) ** 2 for p, r in par), S.mean(r - p for p, r in par), b, se
+def holdet_id():
+    """navn (norm) -> holdet-personId fra den nyeste holdet-fil (til praeregistreringer uden person_id)."""
+    import model as M
+    H = M.holdet(); pers = H["_embedded"]["persons"]
+    return {norm(((pers[str(it["personId"])].get("firstName") or "") + " " + (pers[str(it["personId"])].get("lastName") or "")).strip()):
+            str(it["personId"]) for it in H["items"]}
+
+
+def facit():
+    return json.load(io.open(os.path.join(VAULT, "facit", "holdet.json"), encoding="utf-8"))["runder"]
 
 
 def prognoser():
-    """[(kilde, runde, [(navn, klub, pos, prognose, evidens i hele kampe)])] fra praeregistreringerne."""
-    ud = []
+    """[(kilde, runde, [(person_id, navn, klub, pos, prognose, evidens)])]"""
+    ud, pid_af = [], holdet_id()
     for fn in sorted(glob.glob(os.path.join(VAULT, "exante", "r*.json"))):
         m = re.fullmatch(r"r(\d+)(-[a-z0-9]+)?\.json", os.path.basename(fn))
         if not m:
             continue
+        rnd = int(m.group(1))
         d = json.load(io.open(fn, encoding="utf-8"))
-        rows = [(r["name"], r["club"], r["pos"], r["ev_neste"], (r.get("evidens_min") or 0) / 90.0)
-                for r in d["spillere"] if r.get("ev_neste") is not None]
-        ud.append((os.path.basename(fn), int(m.group(1)), rows))
+        felt = "ev_r%d" % rnd if any(r.get("ev_r%d" % rnd) is not None for r in d["spillere"]) else "ev_neste"
+        rows = [(str(r.get("person_id") or pid_af.get(norm(r["name"]), "")), r["name"], r["club"], r["pos"], r[felt],
+                 (r.get("us_min") or r.get("evidens_min") or 0) / 90.0) for r in d["spillere"] if r.get(felt) is not None]
+        ud.append(("%s (%s)" % (os.path.basename(fn), felt), rnd, rows))
     return ud
 
 
 def main():
-    fn = os.path.join(VAULT, "facit", "understat.json")
-    if not os.path.exists(fn):
-        raise SystemExit("facit/understat.json mangler - koer python facit_alle.py foerst")
-    facit = json.load(io.open(fn, encoding="utf-8"))["runder"]
-    import model as M
-    us_af = M.us_kort()[0]
+    fac = facit()
     samlet = {}
     for kilde, rnd, rows in prognoser():
-        f = facit.get(str(rnd))
+        f = fac.get(str(rnd))
         if not f:
             print("(%s: intet facit for R%d endnu)" % (kilde, rnd))
             continue
-        for navn, klub, pos, ev, n90 in rows:
-            uid = us_af.get(norm(navn))
-            if uid is None:
-                continue                      # uden understat-id kan facit ikke slaas op
-            real = f[uid]["point"] if uid in f else -5
-            samlet.setdefault(kilde, []).append((rnd, navn, pos, ev, real, n90))
-    if not samlet:
-        print("ingen praeregistreringer med facit endnu (exante/ + facit_alle.py efter runden)")
+        for pid, navn, klub, pos, ev, n90 in rows:
+            if pid in f:
+                samlet.setdefault(kilde, []).append((rnd, navn, pos, ev, f[pid], n90))
 
     for kilde, par in samlet.items():
-        n, mse, bias, b, se = maal([(p[3], p[4]) for p in par])
-        print("\n=== %s: %d spiller-runder ===" % (kilde, n))
-        print("  snit prognose %.1f  snit realiseret %.1f  |  MSE %.0f  bias %+.1f  |  haeldning beta %.2f (SE %.2f)" % (
-            S.mean(p[3] for p in par), S.mean(p[4] for p in par), mse, bias, b, se))
+        print("\n=== %s: %d spiller-runder (%s) ===" % (kilde, len(par), ", ".join("R%d" % r for r in sorted({p[0] for p in par}))))
+        xs, ys = [p[3] for p in par], [p[4] for p in par]
+        a, b, se = ols(xs, ys)
+        print("  snit prognose %.1f  snit realiseret %.1f  |  haeldning beta %.2f (SE %.2f)  skaering %.1f" % (S.mean(xs), S.mean(ys), b, se, a))
         spand = [("evidens < 5", lambda n: n < 5), ("evidens 5-15", lambda n: 5 <= n < 15), ("evidens >= 15", lambda n: n >= 15)]
-        print("  efter evidens (hele kampe):")
+        print("  efter evidens:")
         for lbl, fn in spand:
             sub = [p for p in par if fn(p[5])]
             if len(sub) < 30:
@@ -111,22 +107,28 @@ def main():
                 100 * andel, len(sub), mp, mr, 100 * mr / mp if mp else float("nan"), len(tynd)))
 
 
+def maal(par):
+    """par: [(prognose, realiseret)] -> (n, MSE, bias, beta, SE)."""
+    xs, ys = [p for p, _ in par], [r for _, r in par]
+    a, b, se = ols(xs, ys)
+    return len(par), S.mean((r - p) ** 2 for p, r in par), S.mean(r - p for p, r in par), b, se
+
+
 def backtest(runder=None):
-    """Backtest af model.py as-of hver runde fra R4 til seneste runde med facit (grundlaget for
+    """Backtest af model.py as-of hver runde fra R4 til seneste runde med facit (aftalt 20/10 som grundlag for
     modelrettelserne). Koer foer og efter en aendring paa de samme data; den tages kun ind, hvis MSE falder uden
     at beta eller top-testen bliver vaerre.
-    As-of: understat-kampe foer runden, RotoWire for runden, Betfair for runden og tidligere runder.
+    As-of: FotMob-kampe foer runden, RotoWire for runden, odds for runden og tidligere runder.
     Ikke as-of: holdet-filen (klub, isOut) og manager_input.json er dagens - lille laekage, hoejst ~5 poster."""
     import model as M
-    facit = json.load(io.open(os.path.join(VAULT, "facit", "understat.json"), encoding="utf-8"))["runder"]
-    runder = runder or [r for r in range(4, 21) if str(r) in facit]
+    fac = facit()
+    runder = runder or [r for r in range(4, 21) if str(r) in fac]
     data = []   # (runde, prognose, realiseret, evidens i vaegtede startkampe)
     for rnd in runder:
-        f = facit[str(rnd)]
+        f = fac[str(rnd)]
         for r in M.byg(rnd, True)[0]:
-            if r["us_id"]:
-                uid = str(r["us_id"])
-                data.append((rnd, r["ev_neste"], f[uid]["point"] if uid in f else -5, r["forklaring"]["n"] / 90))
+            if str(r["person_id"]) in f:
+                data.append((rnd, r["ev_neste"], f[str(r["person_id"])], r["forklaring"]["n"] / 90))
     print("BACKTEST R%s (model.py as-of, rundeinfo): %d spiller-runder" % ("+R".join(map(str, runder)), len(data)))
     print("%-14s %5s %7s %7s %13s" % ("", "n", "MSE", "bias", "beta (SE)"))
     grupper = [("alle", lambda x: True), ("evidens < 5", lambda x: x[3] < 5), ("evidens 5-15", lambda x: 5 <= x[3] < 15),

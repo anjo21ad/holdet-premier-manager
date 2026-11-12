@@ -8,16 +8,15 @@ gjort til porte med exit-kode != 0:
 
 Brug:  python kvalitet.py --runde <N> [--deadline 2026-10-10T13:30]   (deadline: default fra holdets kampplan)
 """
-import glob, io, json, os, sys
+import collections, glob, io, json, os, sys
 from datetime import datetime
 
-from hent import SP, UK
+from hent import SP, KODE
 
 KLUBBER = {"ARS", "AVL", "BOU", "BRE", "BHA", "CHE", "COV", "CRY", "EVE", "FUL", "HUL", "IPS", "LEE",
            "LIV", "MCI", "MUN", "NEW", "NFO", "SUN", "TOT"}
 # maks. alder ved deadline (timer) - RotoWire skifter fra predicted til confirmed ~1 t foer kickoff
-MAKS_ALDER = {"rw-r{r}.json": 24, "bf-r{r}-MATCH_ODDS.json": 48, "bf-r{r}-BOTH_TEAMS_TO_SCORE.json": 48,
-              "us-league-2026.json": 96}
+MAKS_ALDER = {"rw-r{r}.json": 24, "od-r{r}.json": 48, "fm-liga-PL-2026.json": 96}
 # (g90, a90)-loft pr. position: over dette er en rate ekstrem i PL (bedste offensive forsvarere ~0,15 xG/90)
 GRAENSER = {"defense": (0.20, 0.30), "midfield": (0.60, 0.50), "striker": (1.00, 0.45), "goalkeeper": (0.01, 0.05)}
 
@@ -25,17 +24,14 @@ stop, advar = [], []
 
 
 def laes(fn):
-    """JSON-port: findes, er ikke en HTML-skal eller en 461-bytes 404, og kan parses."""
+    """JSON-port: findes, er ikke en HTML-skal, og kan parses."""
     sti = os.path.join(SP, fn)
     if not os.path.exists(sti):
         stop.append("%s mangler" % fn)
         return None
     raw = io.open(sti, "rb").read()
     if raw.lstrip()[:1] == b"<":
-        stop.append("%s er HTML, ikke JSON (holdet-skal eller understat-404?) - %d bytes" % (fn, len(raw)))
-        return None
-    if len(raw) < 1000:
-        stop.append("%s er kun %d bytes (understat uden XHR-header giver 461)" % (fn, len(raw)))
+        stop.append("%s er HTML, ikke JSON (en HTML-skal paa en flyttet sti?) - %d bytes" % (fn, len(raw)))
         return None
     try:
         return json.loads(raw.decode("utf-8"))
@@ -44,32 +40,53 @@ def laes(fn):
         return None
 
 
-def pris_mod_facit(board, r):
-    """Andel af spillerne, hvor pris = startpris + realiserede point (point = prisdelta) inden for 20 tkr.
-    En forældet holdet-fil falder igennem her, fordi dens priser mangler de seneste runders point.
-    None, hvis facit endnu ikke er bygget (python facit_alle.py)."""
-    fn = os.path.join(os.path.dirname(os.path.abspath(__file__)), "facit", "understat.json")
-    if not os.path.exists(fn):
-        return None
-    fac = json.load(io.open(fn, encoding="utf-8"))["runder"]
-    afv = [abs(x["price"] - x["startPrice"] - sum(fac[str(k)].get(str(x["us_id"]), {}).get("point", -5) / 1000.0
-                                                 for k in range(1, r) if str(k) in fac))
-           for x in board if x["us_id"]]
-    return sum(1 for a in afv if a <= 0.02) / len(afv)
+def odds_port(fn, od, par):
+    """Oddsfil: rundens kampe, og sandsynligheder der summer til 1 og ligger i et plausibelt omraade."""
+    kampe = {(k["h"], k["a"]): k for k in od.get("kampe", [])}
+    mangler = sorted(par - set(kampe))
+    if mangler:
+        stop.append("%s mangler kampe: %s - de regnes paa holdstyrken alene" % (fn, mangler))
+    for (h, a), k in kampe.items():
+        s = k["pH"] + k["pD"] + k["pA"]
+        if abs(s - 1) > 0.01 or not 0.2 <= k["pOver25"] <= 0.9 or min(k["pH"], k["pD"], k["pA"]) <= 0.01:
+            stop.append("%s: %s-%s har uplausible sandsynligheder (1X2 sum %.3f, over 2,5 %.2f)" % (fn, h, a, s, k["pOver25"]))
 
 
-def betfair_port(fn, bf):
-    """Betfair-fil: mindst 10 kampe, kun filens egen markedstype og engelske runner-navne."""
-    ev = [e for et in bf.get("eventTypes", []) for e in et.get("eventNodes", [])]
-    if len([e for e in ev if " v " in e["event"]["eventName"]]) < 10:
-        stop.append("%s: under 10 kampe med ' v ' i navnet (locale=da eller ' - '-navne?)" % fn)
-    typer = {m["description"].get("marketType") for e in ev for m in e["marketNodes"]}
-    if typer != {fn.split("-", 2)[2][:-5]}:
-        stop.append("%s indeholder markedstyperne %s (Match Odds i BTTS-filen faar runden til at falde stille ud af modellen)"
-                    % (fn, sorted(typer)))
-    navne = {rn["description"]["runnerName"] for e in ev for m in e["marketNodes"] for rn in m["runners"]}
-    if navne & {"Uafgjort", "Ja", "Nej"}:
-        stop.append("%s er hentet med locale=da - parseren forventer engelske runner-navne" % fn)
+def fotmob_port(r, deadline_utc):
+    """Alle aarets PL-kampe foer runden skal ligge i cachen; ellers mangler modellen spilletid og xG."""
+    import model as M
+    liste = laes("fm-liga-PL-2026.json")
+    if liste is None:
+        return
+    _, dl = M.kampplan()
+    closes = [dl[x] for x in sorted(dl)]
+    foer = [m for m in liste if not m["aflyst"] and sum(1 for c in closes if c[:16] <= m["tid"][:16]) < r]
+    ufaerdige = [m for m in foer if not m["faerdig"]]
+    mangler = [m for m in foer if m["faerdig"] and not os.path.exists(os.path.join(SP, "fm-m-%s.json" % m["id"]))]
+    if ufaerdige:
+        stop.append("FotMob: %d kampe foer R%d er ikke faerdige i kamplisten (gammel liste? koer: python hent.py fotmob)" % (len(ufaerdige), r))
+    if mangler:
+        stop.append("FotMob: %d spillede kampe mangler i cachen (koer: python hent.py fotmob)" % len(mangler))
+    pr_hold = collections.Counter(KODE.get(n, n) for m in foer for n in (m["h"], m["a"]))
+    if pr_hold and (len(set(pr_hold.values())) > 1 or min(pr_hold.values()) < r - 1):
+        advar.append("FotMob: kampe pr. hold %s foer R%d (udsat kamp?)" % (sorted(set(pr_hold.values())), r))
+    for saeson in ("2024", "2025"):
+        for liga in ("PL", "L1", "BL", "SA", "LL"):
+            if not os.path.exists(os.path.join(SP, "fm-liga-%s-%s.json" % (liga, saeson))):
+                stop.append("FotMob-historik mangler: %s %s (koer: python hent.py fotmob historik)" % (liga, saeson))
+
+
+def holdet_port(r, meta):
+    """Den valgte holdet-fil skal vaere hentet efter seneste afsluttede runde - ellers mangler priserne dens point."""
+    import model as M
+    d = M.J("holdet-pl-schedule.json")
+    slut = {i + 1: x["end"][:10] for i, x in enumerate(d["rounds"])}
+    fn = meta["holdet_fil"]
+    dd, mm = int(fn[7:9]), int(fn[9:11])
+    hentet = "%d-%02d-%02d" % (2026 if mm >= 7 else 2027, mm, dd)
+    if r > 1 and hentet < slut[r - 1]:
+        stop.append("holdet-filen %s er hentet foer R%d sluttede (%s) - priserne mangler rundens point (koer: python hent.py holdet)"
+                    % (fn, r - 1, slut[r - 1]))
 
 
 def alder(fn, deadline):
@@ -105,32 +122,22 @@ def main():
         for k, v in rw.items():
             if len(v.get("xi", [])) != 11:
                 stop.append("RotoWire %s har %d i XI (parser-forskydning?)" % (k, len(v.get("xi", []))))
-    us = laes("us-league-2026.json")
-    if us is not None:
-        hist = {t["title"]: len(t.get("history", [])) for t in us["teams"].values()}
-        if len(set(hist.values())) > 1 or min(hist.values()) < r - 1:
-            stop.append("understat: kampe pr. hold %s - forventet %d spillede runder for alle" % (sorted(set(hist.values())), r - 1))
-    for fn in ("bf-r%d-MATCH_ODDS.json" % r, "bf-r%d-BOTH_TEAMS_TO_SCORE.json" % r):
-        bf = laes(fn)
-        if bf is not None:
-            betfair_port(fn, bf)
-    for fn in sorted(glob.glob(os.path.join(SP, "us-p-*.json"))):
-        raw = io.open(fn, "rb").read()
-        if len(raw) < 1000 or raw[:1] != b"{":
-            stop.append("%s er %d bytes / ikke JSON" % (os.path.basename(fn), len(raw)))
+    od = laes("od-r%d.json" % r)
+    if od is not None:
+        odds_port("od-r%d.json" % r, od, set(M.kampplan()[0].get(r, [])))
+    fotmob_port(r, deadline)
 
     # 3. modellens OUTPUT - det er det, handel.py bruger
     try:
         board, meta = M.byg(r)
         if meta["matchet"] < 0.7 * meta["aktive"]:
-            stop.append("kun %d af %d spillere matchet mod understat" % (meta["matchet"], meta["aktive"]))
-        andel = pris_mod_facit(board, r)
-        if andel is None:
-            advar.append("facit/understat.json mangler (koer python facit_alle.py) - holdet-filens alder er ikke tjekket")
-        elif andel < 0.7:
-            stop.append("holdet-filen %s stemmer ikke med facit: kun %.0f %% af priserne = startpris + point (foraeldet fil?)" % (meta["holdet_fil"], 100 * andel))
+            stop.append("kun %d af %d spillere matchet mod FotMob" % (meta["matchet"], meta["aktive"]))
+        holdet_port(r, meta)
         if r not in meta["marked_runder"]:
-            stop.append("ingen Betfair-filer for R%d (koer: python hent.py betfair N) - naeste runde regnes paa tier alene" % r)
+            stop.append("ingen oddsfil for R%d (koer: python hent.py odds N) - naeste runde regnes paa holdstyrken alene" % r)
+        prior = {k: v for k, v in meta["prior"].items() if k != "GK"}
+        if any(v[0] <= 0 for v in prior.values()):
+            stop.append("rolleprior paa 0 for %s - for faa spillere med nok minutter (mangler historikken?)" % sorted(k for k, v in prior.items() if v[0] <= 0))
     except Exception as e:
         stop.append("modelkoerslen (model.py) fejlede: %r" % e)
         board = None
@@ -138,16 +145,17 @@ def main():
         fremmede = sorted({x["club"] for x in board} - KLUBBER)
         if fremmede:
             stop.append("klubber uden for spillets univers: %s" % fremmede)
-        if us is not None:   # holdet er eneste autoritet paa klub: afvigelser LISTES, overskrives aldrig
-            usklub = {str(p["id"]): UK.get(p["team_title"].split(",")[-1].strip()) for p in us["players"]}
-            afv = [(x["name"], x["club"], usklub[str(x["us_id"])]) for x in board
-                   if x["us_id"] and usklub.get(str(x["us_id"])) not in (None, x["club"])]
-            if afv:
-                advar.append("klub: holdet og understat er uenige om %d spillere (holdet gaelder): %s"
-                             % (len(afv), ", ".join("%s %s/%s" % t for t in afv[:8])))
-        blinde = [x["name"] for x in board if not x["us_id"] and x["pS_neste"] >= 0.5]
+        # holdet er eneste autoritet paa klub: afvigelser mod FotMobs seneste kamp LISTES, overskrives aldrig
+        senest = {}
+        for _, k in sorted(M.kampe_foer(r), key=lambda t: t[1]["tid"]):
+            for p in k["spillere"]:
+                senest[p["id"]] = KODE.get(k[p["hold"]], k[p["hold"]])
+        afv = [(x["name"], x["club"], senest[x["fm_id"]]) for x in board if x["fm_id"] and senest.get(x["fm_id"]) not in (None, x["club"])]
+        if afv:
+            advar.append("klub: holdet og FotMob er uenige om %d spillere (holdet gaelder): %s" % (len(afv), ", ".join("%s %s/%s" % t for t in afv[:8])))
+        blinde = [x["name"] for x in board if not x["fm_id"] and x["pS_neste"] >= 0.5]
         if blinde:
-            advar.append("%d sandsynlige startere uden understat-match (rater = prior alene): %s" % (len(blinde), ", ".join(blinde[:10])))
+            advar.append("%d sandsynlige startere uden FotMob-match (rater = prior alene): %s" % (len(blinde), ", ".join(blinde[:10])))
         for x in board:
             gmax, amax = GRAENSER[x["pos"]]
             if x["g90"] > gmax or x["a90"] > amax:

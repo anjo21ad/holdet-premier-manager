@@ -14,7 +14,7 @@ from datetime import datetime
 import model as M
 
 VAULT = os.path.dirname(os.path.abspath(__file__))
-FELTER = ["name", "club", "pos", "price", "us_id", "rolle", "g90", "a90", "pS_neste", "pStart", "bt", "f60",
+FELTER = ["name", "club", "pos", "price", "person_id", "fm_id", "rolle", "g90", "a90", "pS_neste", "pStart", "bt", "f60",
           "ev_neste", "ev_rest", "ev_tot"]
 
 
@@ -29,7 +29,7 @@ def main():
     board, meta = M.byg(runde)
     fn = os.path.join(VAULT, "hold.json")
     hold = json.load(io.open(fn, encoding="utf-8")) if os.path.exists(fn) else {}
-    kilder = [f for f in os.listdir(M.SP) if f.startswith(("rw-r%d." % runde, "bf-r%d-" % runde, "us-league-2026", meta["holdet_fil"]))]
+    kilder = [f for f in os.listdir(M.SP) if f in ("rw-r%d.json" % runde, "od-r%d.json" % runde, "fm-liga-PL-2026.json", meta["holdet_fil"])]
     m = {"runde": runde, "etiket": etiket, "tidspunkt": datetime.now().isoformat(timespec="seconds"), "model": "model.py",
          "model_sha": hashlib.sha256(open(M.__file__, "rb").read()).hexdigest()[:16],
          "kilder": {f: datetime.fromtimestamp(os.path.getmtime(os.path.join(M.SP, f))).isoformat(timespec="minutes") for f in sorted(kilder)},

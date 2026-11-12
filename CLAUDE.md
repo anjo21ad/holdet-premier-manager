@@ -18,7 +18,7 @@ Regn efter, vis mellemregningen, og sig det, hvis et forslag ikke holder. Når e
 
 ## Modellen
 
-Se [docs/metode.md](docs/metode.md). Kort: Marcel-rate på xG uden straffe med K = 1.000 minutter plus et separat straffeled, spilletid fra RotoWire og startandel trukket mod status med tre kampe, holdstyrke fra Betfair. `evaluer()` er det eneste sted, EV beregnes. Dit eget skøn går kun ind via `manager_input.json`.
+Se [docs/metode.md](docs/metode.md). Kort: Marcel-rate på xG uden straffe med K = 1.000 minutter plus et separat straffeled, spilletid fra RotoWire og startandel trukket mod status med tre kampe, holdstyrke fra markedets odds (resultat og over/under 2,5 mål). `evaluer()` er det eneste sted, EV beregnes. Dit eget skøn går kun ind via `manager_input.json`.
 
 **Kompleksitetsbudget:** ingen ny parameter, kilde eller lag uden målt forbedring i kalibreringen på mindst 2 runder (præregistrér varianten med et mærke og kør `kalibrering_alle.py`).
 
@@ -31,8 +31,6 @@ Se [docs/metode.md](docs/metode.md). Kort: Marcel-rate på xG uden straffe med K
 - `kvalitet.py` skal stå uden STOP, før der træffes en beslutning.
 
 ## Data
-
-**Status november 2026:** understat er nede, og Betfair lukker for danske kunder 18/11. Erstatningerne (Pinnacle, FotMob, FPL) er testet, men ikke bygget ind; se [docs/metode.md](docs/metode.md#datakilderne-i-november-2026). Indtil da stopper `kvalitet.py` på understat, og en beslutning kræver et tjek af, hvad de manglende runder ændrer.
 
 holdet.dk er eneste autoritet på pris, klub og position, også når spillets univers afviger fra virkeligheden. Ret aldrig en klub ud fra generel viden. Data må ikke committes: `input/`, `exante/` og `facit/` er gitignoreret og skal blive det.
 

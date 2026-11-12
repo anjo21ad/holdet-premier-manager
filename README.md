@@ -33,32 +33,18 @@ Modellens mål er derfor holdets samlede værdi, netto af gebyr og rente. Det ha
 
 ## Data: fire kilder
 
-<p align="center"><img src="docs/img/saadan-virker-det.svg" alt="Fra data til beslutning: holdet.dk, understat, Betfair Match Odds og RotoWire går ind i modellen, derefter kvalitetstjek, seks kontroller og beslutning" width="100%"></p>
+<p align="center"><img src="docs/img/saadan-virker-det.svg" alt="Fra data til beslutning: holdet.dk, FotMob, odds fra Pinnacle og RotoWire går ind i modellen, derefter kvalitetstjek, seks kontroller og beslutning" width="100%"></p>
 
 | Kilde | Hvad den giver | Hvorfor den er vigtig |
 |---|---|---|
 | **holdet.dk** | Priser, klubber, positioner og kampprogram | Point er pris, så spillets egne tal er facit. holdet.dk er eneste autoritet, også når spillets univers afviger fra virkeligheden |
-| **understat** | Minutter, xG og xA fra hver kamp i tre sæsoner | xG måler chancernes kvalitet og svinger mindre end mål. Det er grundlaget for spillerens egen rate |
-| **Betfair** | Odds på næste runde: resultat, og om begge hold scorer | Markedet er det bedste offentlige bud på hver kamp. Herfra kommer sejrschance, mål for og imod og clean sheet. For Calafiori står det for 61 % af værdien |
+| **FotMob** | Starter, minutter, xG og xA fra hver kamp i tre sæsoner, i Premier League og de fire andre store ligaer | xG måler chancernes kvalitet og svinger mindre end mål. Det er grundlaget for spillerens egen rate |
+| **Pinnacle** | Odds på næste runde: resultat og over/under 2,5 mål | Markedet er det bedste offentlige bud på hver kamp. Herfra kommer sejrschance, mål for og imod og clean sheet. For Calafiori står det for 61 % af værdien |
 | **RotoWire** | Forventede startopstillinger til næste runde | Alt ganges med spilletid. En spiller på bænken giver −5 |
 
 Før hver deadline tjekker `kvalitet.py` data. Er en fil for gammel, eller har en kilde svaret forkert, stopper den hellere end at regne videre.
 
-> [!WARNING]
-> **To af kilderne svigter i november 2026.** understat har været nede siden 2. november og viser kun en vedligeholdelsesside, og Betfair lukker for danske kunder 18. november. Indtil erstatningerne er bygget ind, regner modellen på understat-data til og med runde 8, og `kvalitet.py` stopper med vilje.
-
-### Erstatningerne
-
-Alle fire er testet fra en dansk maskine og har samme univers som holdet.dk, med Coventry, Hull og Ipswich i ligaen:
-
-| Kilde | Erstatter | Testet mod den gamle kilde |
-|---|---|---|
-| **Pinnacle** | Betfair: odds på resultat, totaler og holdtotaler | Sandsynlighederne for runde 11 lå i gennemsnit 0,5 procentpoint fra Betfair, højst 1,3, over ni kampe |
-| **FotMob** | understat: skudkort med xG pr. skud, situation og opstillinger | Skudniveauet gør det muligt at skille straffe fra og måle koncentration som før |
-| **FPL** | understat: xG, xA, minutter og starter pr. kamp | Korrelation 0,977 med understats xG i runde 1-8 over 183 spillere. FPL bruger Opta, der ligger lavere, så tallene skal skaleres: xG × 1,107 og xA × 1,27 |
-| **holdet.dk** | understat som facit | Point er prisændring, så spillets egne priser er facit |
-
-En ny kilde tages først ind, når backtesten på runde 4-8 ikke bliver dårligere med den. Et tjek 11. november viste, at en fuld optimering gav samme svar med og uden runde 9-10 fra FPL. Detaljerne står i [docs/metode.md](docs/metode.md#datakilderne-i-november-2026).
+Odds for runder, der allerede er spillet, kommer fra football-data.co.uk's arkiv.
 
 ## Den store fælde: held ligner talent
 
@@ -88,7 +74,7 @@ Næste runde regnes på RotoWires forventede opstilling. Resten af sæsonen er h
 
 ### 3. Holdstyrke: markedet
 
-Hvert hold har et udgangspunkt fra før sæsonen, som hver runde opdateres med de målforventninger, der passer til Betfairs odds. Næste kamp regnes direkte på oddsene.
+Hvert hold har et udgangspunkt fra før sæsonen, som hver runde opdateres med de målforventninger, der passer til oddsene på resultat og antal mål. Næste kamp regnes direkte på oddsene.
 
 <details>
 <summary><b>For de nysgerrige: reglerne og formlen</b></summary>
@@ -98,7 +84,7 @@ Hvert hold har et udgangspunkt fra før sæsonen, som hver runde opdateres med d
 |---|---|---|
 | 1 | **Rate (Marcel)** | xG uden straffe og xA pr. 90 minutter fra **starter** i tre sæsoner, vægtet 1,0 / 0,8 / 0,6. Minutter i en anden klub tæller halvt. Raten trækkes mod medianen for spillerens rolle med 1.000 minutters vægt. Straffe lægges til som et separat led: ligaens straffe-xG pr. holdkamp × spillerens andel af klubbens straffe |
 | 2 | **Spilletid** | Næste runde fra RotoWire. Resten af sæsonen er ½ status + ½ startandel i klubbens seneste 15 kampe, trukket mod status med tre kampe |
-| 3 | **Holdstyrke** | Udgangspunkt før sæsonen, opdateret med de målforventninger, der passer til Betfairs priser |
+| 3 | **Holdstyrke** | Udgangspunkt før sæsonen, opdateret med de målforventninger, der passer til oddsene: totalen fra P(over 2,5 mål) og fordelingen fra P(hjemmesejr) |
 | | **Pointformel** | Spillets regler i `ev_kamp()`. `evaluer()` er det eneste sted, forventningen beregnes |
 
 ```
@@ -111,19 +97,19 @@ Hele begrundelsen med kilder står i [docs/metode.md](docs/metode.md).
 
 ## Et regnestykke: Calafiori mod Everton
 
-<p align="center"><img src="docs/img/calafiori.svg" alt="Calafiori mod Everton hjemme i runde 8 giver 76,1 tusind kroner i forventet vækst. Arsenal giver 46,4: clean sheet 19,0, holdmål 16,9, resultat 15,9, mål imod minus 4,9 og nederlag hjemme minus 0,5. Calafiori selv giver 27,8: mål 19,5, assist 3,9, skud på mål 3,4 og sejrsmål og udligning 1,0. At være med giver 1,9: på banen 6,0 og gult kort minus 4,1. Inputs: 68 procent chance for sejr, Everton scorer ikke i 47 procent, 92 procent chance for at starte, 0,134 xG og 0,077 xA pr. 90 minutter" width="100%"></p>
+<p align="center"><img src="docs/img/calafiori.svg" alt="Calafiori mod Everton hjemme i runde 8: 70,4 tusind kroner i forventet vækst. Arsenal giver 43,0: clean sheet, holdmål, resultat, mål imod og nederlag hjemme. Calafiori selv giver 25,4: mål, assist, skud på mål, sejrsmål og udligning. At være med giver 2,0: på banen og gult kort. Inputs: 66 % chance for sejr, Everton scorer ikke i 46 %, 92 % chance for at starte, 0,127 xG og 0,076 xA pr. 90 minutter" width="100%"></p>
 
-Sådan bliver tallene til kroner for én spiller. Calafiori ventes at stige 76.100 kr., når Arsenal tager imod Everton i runde 8. Det er modellens låste prognose fra før deadline. Hvert led er en chance gange det, spillets regler giver, gange hvor meget han ventes at spille.
+Sådan bliver tallene til kroner for én spiller. Calafiori ventes at stige 70.400 kr., når Arsenal tager imod Everton i runde 8, regnet med de data, modellen havde før deadline. Hvert led er en chance gange det, spillets regler giver, gange hvor meget han ventes at spille.
 
-61 % af det kommer fra Arsenal og ikke fra Calafiori selv. Køber du en forsvarer, køber du hans hold. For Haaland er det omvendt: 78 % af hans forventede vækst kommer fra hans egne mål og chancer.
+61 % af det kommer fra Arsenal og ikke fra Calafiori selv. Køber du en forsvarer, køber du hans hold. For Haaland er det omvendt: 76 % af hans forventede vækst kommer fra hans egne mål og chancer.
 
 ## Det samme for alle 589 spillere
 
-<p align="center"><img src="docs/img/alle-spillere.svg" alt="Alle 589 spillere efter forventet vækst resten af sæsonen. Bedst pr. position: Raya 916, Gabriel 1.059, Barcola 1.299 og Haaland 1.844. Calafiori ligger på 903 tusind kroner, nr. 2 af 195 forsvarere og nr. 24 af 589 i alt. 282 spillere ventes at give under 100 tusind kroner" width="100%"></p>
+<p align="center"><img src="docs/img/alle-spillere.svg" alt="Alle 589 spillere efter forventet vækst resten af sæsonen. Bedst pr. position: Raya 897, Gabriel 905, Cole Palmer 1.135, Haaland 1.678. Calafiori ligger på 852 tusind kroner, nr. 2 af 195 forsvarere og nr. 23 af 589 i alt. 307 spillere ventes at give under 100 tusind kroner" width="100%"></p>
 
-Regnestykket gentages for hver kamp resten af sæsonen og for hver af de 589 spillere i spillet. For Calafiori giver det 903.000 kr. og en plads som nr. 2 blandt forsvarerne.
+Regnestykket gentages for hver kamp resten af sæsonen og for hver af de 589 spillere i spillet. For Calafiori giver det 852.000 kr. og en plads som nr. 2 blandt forsvarerne.
 
-Næsten halvdelen af spillerne ventes at give under 100.000 kr., fordi de sjældent starter. De gode handler skal findes blandt de få spillere længst til højre.
+Godt halvdelen af spillerne ventes at give under 100.000 kr., fordi de sjældent starter. De gode handler skal findes blandt de få spillere længst til højre.
 
 ## Før en handel anbefales
 
@@ -181,19 +167,16 @@ Før runde 11 skiftede jeg Thiago ud med Delap. Thiago fik direkte rødt kort i 
 
 ## Virker det?
 
-<p align="center"><img src="docs/img/virker-det.svg" alt="Kan man stole på forskellene? Hældning 1,0 er præcist. Første model R4-R5: 0,78. Nuværende model R4-R5 regnet bagefter: 0,84. Låst før R6: 0,74. Låst før R7: 1,03. R6 og R7 samlet efter antal kampe: under 5 kampe 0,85, 5-15 kampe 0,62, over 15 kampe 0,96, alle 0,90. Top 5 procent leverede 86 procent af det lovede" width="100%"></p>
+<p align="center"><img src="docs/img/virker-det.svg" alt="Kan man stole på forskellene? Hældning 1,0 er præcist. Runde 4-5: 0,73. Runde 6-7: 1,08. Runde 8: 0,79. Runde 9-10: 0,91. Runde 4-10 samlet efter antal kampe: under 5 1,00, 5-15 0,62, over 15 0,94, alle 0,94. Top 5 % leverede 111 % af det lovede" width="100%"></p>
 
-Prognoserne låses med `praeregistrer.py` før hver deadline og kan ikke rettes bagefter. Efter runden måler jeg, hvor meget af forskellen mellem spillerne der holdt. 1,0 er præcist, og under 1 betyder, at prognosen overdriver forskellene.
+Hver runde fra 4 til 10 er regnet, som modellen ville have set den før deadline: kun kampe, odds og opstillinger, der fandtes på det tidspunkt. Bagefter måles, hvor meget af forskellen mellem spillerne der holdt. 1,0 er præcist, og under 1 betyder, at prognosen overdriver forskellene.
 
-- **Samlet holder det.** I de to runder, der er låst indtil nu, R6 og R7, er hældningen 0,90. Det ligger inden for de 25 %, som kontrollen "forskellen −25 %" dækker.
-- **Toppen leverer det meste.** De 5 % højest rangerede spillere leverede 86 % af det lovede. Det er optimizerens forbandelse i lille skala, og det er grunden til, at kontrollerne findes.
-- **Spillere med 5-15 kampe er det svage punkt.** Hældningen er 0,62, og det var også den svageste gruppe i backtesten. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
-- **Én runde er for lidt.** Spillere med under 5 kampe lå på 1,28 i R6 og 0,36 i R7. Samlet er det 0,85, men stregerne viser, hvor usikkert det stadig er.
-- **Siden grafen.** R8 gav 0,66, og toppen leverede kun 57 %. R9 blev ikke låst. R10 gav 0,84, og de 5 % højest rangerede leverede 112 %, selvom modellen kun havde understat-data til og med R8. R10 er målt mod holdet.dk's egne prisændringer.
+- **Samlet holder det.** Over 3.551 spiller-runder er hældningen 0,94. Det ligger inden for de 25 %, som kontrollen "forskellen −25 %" dækker.
+- **Toppen leverer det lovede.** De 5 % højest rangerede spillere leverede 111 % af det lovede, top 10 % 103 % og top 25 % 99 %.
+- **Spillere med 5-15 kampe er det svage punkt.** Hældningen er 0,62, så forskellene i den gruppe er overdrevne. Gruppen følges runde for runde, og der ændres først noget, når der er tre runders evidens.
+- **Én runde er for lidt.** Hældningen svinger fra 0,73 i runde 4-5 til 1,08 i runde 6-7. Først samlet siger tallene noget.
 
-I backtesten på R4-R5 var den samlede fejl 7 % lavere end i den første model (MSE 3.200 mod 3.436). Hele faldet kom fra Betfair og RotoWire for runden. Marcel gjorde ikke fejlen mindre, men rettede, at prognoserne for spillere med få kampe var mest støj. Modellen er rettet to gange: én gang mellem R6 og R7, og igen før R9, hvor straffe blev et separat led, og startandelen blev trukket mod status. I backtesten på R4-R8 faldt fejlen fra 3.148 til 3.140, og hældningen steg fra 0,83 til 0,85.
-
-Pointene i målingen er regnet ud fra kampdata og rammer holdet.dk's egne tal på kronen for 90-97 % af spillerne. Tallene opdateres, efterhånden som flere runder bliver låst og spillet.
+Hver regel er kun taget ind, fordi den gjorde backtesten bedre. Det gælder også straffe som et separat led og startandelen, der trækkes mod status. Pointene i målingen er holdet.dk's egne prisændringer; for runde 4-5 er de regnet ud fra kampdata med spillets regler. Fra nu af låses prognoserne med `praeregistrer.py` før hver deadline og lægges til, efterhånden som runderne bliver spillet.
 
 ## Kom i gang
 
@@ -206,18 +189,18 @@ git clone https://github.com/anjo21ad/holdet-premier-manager.git
 cd holdet-premier-manager
 cp eksempler/hold.json eksempler/manager_input.json .    # ret hold.json til dit eget hold
 
-python hent.py holdet                       # priser, klubber og kampprogram
-python hent.py liga && python hent.py liga 2025
+python hent.py holdet                       # priser, klubber, kampprogram og resultater
+python hent.py fotmob historik              # første gang: to sæsoner i fem ligaer (~3.500 kampe, ca. 45 min)
+python hent.py fotmob                       # årets kampe; kør igen efter hver runde
+python hent.py odds historik 10             # første gang: odds for de spillede runder
+python hent.py odds 11                      # Pinnacle, højst 48 timer før deadline
 python hent.py rotowire 11                  # højst 24 timer før deadline
-python hent.py betfair 11                   # kræver miljøvariablen BETFAIR_AK
 
-python model.py 11                          # første gang hentes spillerhistorik (~5 min)
-python facit_alle.py                        # faktiske point hidtil
+python model.py 11
+python facit_alle.py                        # facit fra holdet.dk's priser (hent holdet efter hver runde)
 python kvalitet.py --runde 11               # STOP betyder: ingen beslutning på disse data
 python handel.py --skan "Phil Foden"        # de bedste afløsere, vurderet i alle seks kontroller
 ```
-
-I november 2026 fejler `hent.py liga`, fordi understat er nede, og Betfair kan ikke hentes fra Danmark efter 18. november. Se [Erstatningerne](#erstatningerne).
 
 Testene kører uden data: `python test_model.py`. Hvad du gør før deadline og efter hver runde, står i [docs/arbejdsgang.md](docs/arbejdsgang.md).
 
@@ -227,12 +210,12 @@ Testene kører uden data: `python test_model.py`. Hvad du gør før deadline og 
 
 | | |
 |---|---|
-| `hent.py` | Henter fra holdet.dk, understat, Betfair og RotoWire |
+| `hent.py` | Henter fra holdet.dk, FotMob, Pinnacle og RotoWire (odds for spillede runder fra football-data.co.uk) |
 | `model.py` | De tre regler og pointformlen. Skriver `input/board.json` |
 | `handel.py` | Seks kontroller pr. handel, `--skan` efter afløsere og `--log` til en beslutningslog |
 | `kvalitet.py` | Tjekker data før en beslutning og stopper ved fejl |
 | `praeregistrer.py` | Låser alle prognoser før deadline. Nægter at overskrive |
-| `facit_alle.py` | Regner de faktiske point ud for alle spillere |
+| `facit_alle.py` | Facit for alle spillere fra holdet.dk's priser: point er prisændring |
 | `kalibrering_alle.py` | Måler prognoserne mod facit. `--backtest` kører modellen, som den var før hver runde |
 | `test_model.py` | Tests på opdigtede spillere og kampe |
 | `CLAUDE.md` | Arbejdsreglerne, som Claude Code følger |
@@ -247,14 +230,15 @@ Testene kører uden data: `python test_model.py`. Hvad du gør før deadline og 
 - Straffeandelen bygger på sidste og denne sæson. En spiller, der lige har overtaget straffesparkene, er undervurderet, indtil han har taget nogle.
 - Udelukkelser og gule kort ligger ikke i modellen og regnes ved siden af.
 - Nye spillere i en klub får deres spilletid fra få kampe.
-- Betfair prissætter næste runde. De senere runder regnes på holdstyrken.
+- Spillere fra ligaer uden for de fem store hviler på det typiske for rollen.
+- Oddsene dækker næste runde. De senere runder regnes på holdstyrken.
 - Kaptajnens dobbelte vækst regnes med i `handel.py`, men ikke i spillernes tal i `board.json`. Et fald hos kaptajnen trækkes ikke fra, og den bund ligger ikke i modellen.
 
 ## Data og vilkår
 
-Repoet indeholder **ingen data**. Scriptene henter fra holdet.dk, understat, Betfair og RotoWire til din egen computer, og data kommer aldrig med i repoet. Du er selv ansvarlig for at bruge kilderne efter deres vilkår.
+Repoet indeholder **ingen data**. Scriptene henter fra holdet.dk, FotMob, Pinnacle, football-data.co.uk og RotoWire til din egen computer, og data kommer aldrig med i repoet. Du er selv ansvarlig for at bruge kilderne efter deres vilkår.
 
-Projektet er ikke tilknyttet holdet.dk, understat, Betfair eller RotoWire.
+Projektet er ikke tilknyttet holdet.dk, FotMob, Pinnacle, football-data.co.uk eller RotoWire.
 
 ## Licens
 
