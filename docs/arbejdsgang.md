@@ -53,7 +53,7 @@ Facit kræver et holdet-snapshot efter hver runde. Glemmer du en runde, kan den 
 
 | Fil | Indhold |
 |---|---|
-| `hold.json` | Næste beslutningsrunde, dine 11, de gebyrfri spillere, kapital (holdværdi ved vinduets start + bank, i mio.) og kaptajn |
+| `hold.json` | Næste beslutningsrunde, dine 11, de gebyrfri spillere, kapital (dine spilleres værdi + bank efter gebyrer, i mio.) og kaptajn |
 | `manager_input.json` | Det eneste sted, dit skøn går ind i modellen: `pStart` og/eller `rolle`, med en grund og en udløbsdato. Hold det under ~5 poster |
 | `beslutningslog.csv` | Alle vurderede handler med de seks kontroller og den største risiko. Oprettes ved første `--log` |
 | `facit/ekstra.json` | Valgfri. Facit for runder, hvor du ikke har et holdet-snapshot: `{"runder": {"<runde>": {"<personId>": <point>}}}` |

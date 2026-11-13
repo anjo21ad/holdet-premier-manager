@@ -1,5 +1,5 @@
 {
- "_doc": "Kopier til roden af repoet og ret til dit eget hold. runde = naeste beslutningsrunde. hold = dine 11 spillere (navne som i holdet.dk). gebyrfri = spillere, du ejede ved vinduets start (fortrudte koeb er gebyrfri). kapital = holdets vaerdi ved vinduets start + bank, i millioner (aflaeses i appen). kaptajn = din kaptajn.",
+ "_doc": "Kopier til roden af repoet og ret til dit eget hold. runde = naeste beslutningsrunde. hold = dine 11 spillere (navne som i holdet.dk). gebyrfri = spillere, du ejede ved vinduets start (fortrudte koeb er gebyrfri). kapital = dine 11 spilleres vaerdi + bank, i millioner (aflaeses i appen). Har du handlet i vinduet, er gebyret trukket fra banken og dermed ogsaa fra kapitalen. kaptajn = din kaptajn.",
  "runde": 11,
  "hold": [
   "David Raya",
@@ -27,6 +27,6 @@
   "Erling Haaland",
   "Kevin Schade"
  ],
- "kapital": 61.722989,
+ "kapital": 61.693129,
  "kaptajn": "Erling Haaland"
 }
